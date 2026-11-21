@@ -5,7 +5,7 @@
 | Thành viên | GitHub handle | Module chính | Vai quy trình | Người dự phòng cho |
 |---|---|---|---|---|
 | Nguyễn Tuấn Dũng | DungNguyen74 | sim/gather, qa | PO, QA | sim/quan |
-| [Tên nhóm trưởng] | trungtk03 | sim/quan, client/ui | Integrator, Scrum/Release | sim/gather |
+| Nguyễn Hoàng Trung | trungtk03 | sim/quan, client/ui | Integrator, Scrum/Release | sim/gather |
 
 **Vai quy trình:** PO (đầu mối hỏi giảng viên, giữ `docs/clarify.md`) · Integrator (giữ `docs/contracts/`, gắn tag) · QA lead · Scrum/Release. Có thể kiêm.
 

@@ -2,3 +2,7 @@
 
 | # | Ngày giờ | Câu hỏi | Trả lời / giả định | Ai quyết |
 |---|---|---|---|---|
+| 1 | 2026-11-21 10:00 | Nhóm SKT1 có 2 thành viên (`DungNguyen74`, `trungtk03`) trong khi `check_team.py` mặc định gợi ý 4–6 người? | Khai báo đúng thực tế 2 thành viên trong `TEAM.md` và `team_size: 2` trong `game.contract.json` để khớp nhau; CI đặt `continue-on-error: true` cho bước cảnh báo `check_team.py`. | PO & Integrator (`DungNguyen74`, `trungtk03`) |
+| 2 | 2026-11-21 10:20 | Trường `items` trong sự kiện `cook_started` là mảng tên hay object đếm `{nguyên_liệu: số_lượng}`? | Thống nhất dùng object `{k: recipe[k]}` sắp theo khóa (giống `inventory.items` và `snapshot.stock`) để giữ đủ số lượng tiêu hao và đảm bảo JSONL tất định. | Integrator (`trungtk03`) |
+| 3 | 2026-11-21 10:22 | Khi `time_left_ticks` về 0 ở đúng bước khách đang chờ cũng hết `patience_ticks_left`, khách đó có bị trừ uy tín không? | Không trừ uy tín: bước 3 chỉ xử lý `patience` khi `time_left_ticks > 0`; khi hết ca bước 5 phát `customer_left` với `reason: "closing"` giữ nguyên uy tín. | Integrator (`trungtk03`) |
+| 4 | 2026-11-21 10:23 | Làm sao chạy test trên Windows khi `game.contract.json` khai `python3 -m chonoi.headless`? | Giữ nguyên `game.contract.json` là `python3 -m chonoi.headless` cho môi trường chấm Linux/CI; trong `tests/helpers.py` chỉ ánh xạ `python3 -> sys.executable` khi `sys.platform == "win32"`. | Integrator (`trungtk03`) |

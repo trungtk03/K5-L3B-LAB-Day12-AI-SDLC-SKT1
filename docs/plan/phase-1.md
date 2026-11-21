@@ -12,8 +12,8 @@ Hoàn thành 4 lát lõi của Phase 1 theo PRD-0 và Test Contract v1.0 trong 6
 |---|---|---|---|
 | Lát 1 | Bơi, oxy, ngạt, Máu, ngất, sự kiện dive/surface | Nguyễn Tuấn Dũng (`DungNguyen74`) | Khung starter `gather.py` |
 | Lát 2 | Hái nút, bắt cá, sức chứa giỏ, xuất kho bến | Nguyễn Tuấn Dũng (`DungNguyen74`) | Lát 1 |
-| Lát 3 | Khách theo lịch, kiểm tra nguyên liệu, giữ chỗ, kiên nhẫn, rời quán | Nhóm trưởng (`trungtk03`) | Khung starter `quan.py` |
-| Lát 4 | Bếp nấu, lấy món lên tay, phục vụ bàn, trả tiền, boa, uy tín, hết ca | Nhóm trưởng (`trungtk03`) | Lát 3 |
+| Lát 3 | Khách theo lịch, kiểm tra nguyên liệu, giữ chỗ, kiên nhẫn, rời quán | Nguyễn Hoàng Trung (`trungtk03`) | Khung starter `quan.py` |
+| Lát 4 | Bếp nấu, lấy món lên tay, phục vụ bàn, trả tiền, boa, uy tín, hết ca | Nguyễn Hoàng Trung (`trungtk03`) | Lát 3 |
 | QA & E2E | Bộ test từng lát + test hộp đen 2 tiến trình, ma trận truy vết | Cả hai | Lát 1, 2, 3, 4 |
 
 ## Rủi ro & Giải pháp

@@ -1,56 +1,53 @@
-# Day 12 — AI SDLC: Quán Ăn Chợ Nổi
+# Quán Ăn Chợ Nổi — Nhóm SKT1 (Day 12 · AI SDLC)
 
-> **Làm theo nhóm 4–6 người** · Dùng AI để xây game 2D qua **4 phase** trong **3 giờ**: Út Sen lặn bắt cá, hái rau trên mặt nước rồi tối mở quán phục vụ khách.
-> **Yêu cầu từng phase mở đúng mốc giờ tại lab board:** **[Chợ Nổi Lab](https://claude.ai/artifact/E35v787wSx2wDgPTNhMVDg)** (cần đăng nhập claude.ai; có trợ giảng AI cho từng phase).
+> Game quản lý quán ăn 2D mang bản sắc miền Tây Nam Bộ: buổi sáng Út Sen lặn bắt cá và hái rau trên sông Chín Khúc (`gather`); buổi tối mở quán nhà bè nấu và phục vụ khách (`quan`), nối nhau qua file kho `inventory.json`.
 
-## Bắt buộc (chỉ có thế)
-
-Cách làm việc kỹ thuật là **tự do** (push thẳng, nhánh + PR, pair, có hay không CI…). Cái bắt buộc:
-
-1. **Một repo chung:** trưởng nhóm **fork** repo này, đặt tên `K5-L3B-LAB-Day12-AI-SDLC-<ten-nhom>`, thêm mọi thành viên làm collaborator (*Settings → Collaborators*, quyền Write) và để repo **public** (giảng viên xem được, không cần mời).
-2. **Cả nhóm cùng commit** bằng tài khoản GitHub của mình, mỗi người **≥ 3 commit có nội dung** (làm cặp thì ghi `Co-authored-by:`).
-3. **Điền [`TEAM.md`](TEAM.md):** danh sách thành viên + thỏa thuận làm việc nhóm; sửa `team_size` trong [`game.contract.json`](game.contract.json). Commit của người không có trong `TEAM.md` không được tính.
-4. **Gắn tag** `phase-1` … `phase-4` đúng hạn; chạy được tại từng tag.
-5. **Ghi chép tối thiểu:** `docs/verification/phase-n.md`, `docs/clarify.md`, `docs/ai-usage-log.md`, `docs/retro.md`, `docs/members/<handle>.md`.
-
-## Bắt đầu nhanh
+## Chạy sạch (≤ 3 lệnh)
 
 ```bash
-git clone <fork-của-nhóm> && cd <fork-của-nhóm>
-PYTHONPATH=tests:. python3 -m unittest discover -s tests -v        # smoke test
-python3 -m chonoi.live --mode gather                                # chơi thử trên trình duyệt (tùy chọn)
+# 1. Chơi thử trực tiếp trên trình duyệt (buổi sáng; thêm --inventory-out kho.json để xuất kho)
+python3 -m chonoi.live --mode gather --inventory-out kho.json
+
+# 2. Mở quán buổi tối trên trình duyệt từ file kho buổi sáng
+python3 -m chonoi.live --mode quan --inventory kho.json
+
+# 3. Chạy kiểm thử tự động (Test Contract hộp đen + unit/E2E của nhóm)
+PYTHONPATH=tests:. python3 -m unittest discover -s tests -v
 ```
 
-Game cần chế độ **headless** theo Test Contract (`python3 -m chonoi.headless --mode gather|quan …`) để được chạy và chấm tự động. **Công nghệ không ràng buộc**: khung Python trong `chonoi/` chỉ là gợi ý, chi tiết ở [`docs/STARTER.md`](docs/STARTER.md).
+> Trên Windows PowerShell: `$env:PYTHONPATH="tests;."; python -m unittest discover -s tests -v`
 
-## Tự do sáng tạo
+### Chạy headless (Test Contract v1.0)
 
-Ngoài phần đề yêu cầu, nhóm được **thêm** nhân vật, loài cá/cây, sinh vật, món, bản đồ, cơ chế, câu chuyện, đồ họa, âm nhạc… với ba điều kiện: **không phá phần cố định** (tắt ở headless), ghi mục **"Sáng tạo của nhóm"** trong README của nhóm, và **làm lõi đúng trước**.
+```bash
+python3 -m chonoi.headless --mode gather --seed 1 --ticks 600 --inventory-out kho.json --out gather.jsonl
+python3 -m chonoi.headless --mode quan --seed 1 --ticks 600 --inventory kho.json --out quan.jsonl
+```
 
-## Lịch 3 giờ
+## Điều khiển
 
-| Mốc | Phase | Hạn tag |
+| Phím | Buổi sáng (`gather`) | Buổi tối (`quan`) |
 |---|---|---|
-| 0:00 | Phase 1 (PRD-0) | `phase-1` trước 1:00 |
-| 1:00 | Phase 2 | `phase-2` trước 1:55 |
-| 1:55 | Phase 3 | `phase-3` trước 2:30 |
-| 2:30 | Phase 4 | `phase-4` + Release `v1.0.0` trước 3:00 |
+| `W A S D` / Phím mũi tên | Bơi ngang (`x`) và lặn/nổi (`d`) | Đi lại trong quán (`x`, `z`) |
+| `E` (`interact`) | Cập bến (trong vùng bến) hoặc hái rau ở mặt nước | Nấu món (bếp rảnh), bưng món (bếp chín), phục vụ bàn |
+| `Space` (`catch`) | Bắt đàn cá khi đang lặn dưới nước | — |
+| `R` | Chơi lại từ đầu (chế độ `live`) | Chơi lại từ đầu (chế độ `live`) |
 
-Hết giờ mỗi phase thì gắn tag rồi đi tiếp; chỗ chưa xong ghi trung thực trong bằng chứng.
+## Cách tính điểm
 
-## Đánh giá (100 điểm)
+- **Tiền món (`base_price`):** Cá lóc nướng trui `60` (`ca_loc × 1`, nấu 6s), Gỏi bông súng `40` (`bong_sung × 2`, nấu 4s), Lẩu cá linh bông điên điển `120` (`ca_linh × 3 + bong_dien_dien × 1`, nấu 10s).
+- **Tiền boa (`tip`):** Nếu phục vụ khi kiên nhẫn còn `>= 50%` (`tip_min_patience_ratio = 0.5`), `tip = floor(base_price × 0.2)` và tăng uy tín `+0.2` (kẹp trong `[0, 5]`). Khách hết kiên nhẫn bỏ đi làm giảm uy tín `-0.5`.
+- **Điểm tổng (`score`):** `score = earned + 100 × floor(reputation)` (mọi số liệu đọc từ [`game.contract.json`](game.contract.json)).
 
-| Hạng mục | Điểm |
-|---|---|
-| Test tự động ẩn (headless, gồm kiểm tra lại phase trước) | 25 |
-| Làm việc nhóm (một repo chung, chia việc, tích hợp, đổi yêu cầu) | 25 |
-| Kiểm chứng & bằng chứng | 15 |
-| Harness AI (AGENTS.md, skill, nhật ký dùng AI) | 10 |
-| Đánh giá & retro | 10 |
-| Chất lượng sản phẩm (đúng yêu cầu, mở rộng/sáng tạo) | 10 |
-| Demo | 5 |
+## Sáng tạo của nhóm
 
-## Quy định
+- Phase 1 tập trung hoàn thiện chuẩn xác 100% lõi Test Contract v1.0 (4 lát `gather` + `quan`, kiểm mâu thuẫn scenario mức luật mã thoát 2, tính tất định từng byte và E2E 2 tiến trình) trước khi mở rộng sáng tạo ở các phase tiếp theo.
 
-- Dùng AI thoải mái; **không sao chép repo của nhóm khác**; bằng chứng phải thật.
-- Nhân vật, bối cảnh là bản gốc của lab; asset ngoài chỉ dùng CC0/CC-BY/MIT hoặc tự tạo, ghi nguồn trong `CREDITS.md`. Không commit API key, token, `.env`.
+## Cấu trúc & tài liệu nhóm
+
+- Danh sách thành viên & thỏa thuận: [`TEAM.md`](TEAM.md)
+- Kế hoạch & kiểm chứng Phase 1: [`docs/plan/phase-1.md`](docs/plan/phase-1.md), [`docs/verification/phase-1.md`](docs/verification/phase-1.md), [`docs/proof/phase-1/`](docs/proof/phase-1/)
+- Hợp đồng tích hợp & kho mẫu: [`docs/contracts/README.md`](docs/contracts/README.md), [`docs/contracts/inventory.sample.json`](docs/contracts/inventory.sample.json)
+- Hướng dẫn agent & skills: [`AGENTS.md`](AGENTS.md), [`.agents/skills/`](.agents/skills/)
+- Ghi chép nhóm: [`docs/clarify.md`](docs/clarify.md), [`docs/standup.md`](docs/standup.md), [`docs/ai-usage-log.md`](docs/ai-usage-log.md), [`docs/retro.md`](docs/retro.md), [`docs/members/`](docs/members/)
+- Chi tiết khung starter Python: [`docs/STARTER.md`](docs/STARTER.md)
