@@ -18,15 +18,15 @@ from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots
 
 class TestQuanLat3Lat4(unittest.TestCase):
     def test_quan_00_starter_fixture(self):
-        """Khung kiểm thử mẫu: Quán khởi động bình thường với bàn T1 và bếp B1."""
+        """Quán khởi động bình thường với 2 bếp (B1-B2) và 4 bàn (T1-T4) theo Contract v1.1."""
         with Workdir() as w:
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "10",
                                      "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
             rows = read_jsonl(w.path("q.jsonl"))
             s = snapshots(rows)[0]
-            self.assertEqual(len(s["stoves"]), 1)
-            self.assertEqual(len(s["tables"]), 1)
+            self.assertEqual(len(s["stoves"]), 2)
+            self.assertEqual(len(s["tables"]), 4)
 
     # ---- LÁT 3: Khách theo lịch, chọn món, giữ chỗ, kiên nhẫn, no_dish ----
 

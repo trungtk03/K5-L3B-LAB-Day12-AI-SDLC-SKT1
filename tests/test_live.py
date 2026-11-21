@@ -57,6 +57,32 @@ class LiveServerTest(unittest.TestCase):
         self.assertFalse(server.game._thread.is_alive())
         self.assertFalse(server._thread.is_alive())
 
+    def test_day_mode_live_pause_and_ui(self):
+        tuning = load_contract()["tuning"]
+        server = LiveServer(LiveGame("day", tuning, {"day": {}, "gather": {}, "quan": {}}, 1, days=5), port=0)
+        server.start()
+        try:
+            base = f"http://127.0.0.1:{server.port}"
+            code, body = _get(base + "/state")
+            self.assertEqual(code, 200)
+            st = json.loads(body)
+            self.assertEqual(st["mode"], "day")
+            self.assertEqual(st["day"], 1)
+            self.assertIn("day_plan", st)
+            self.assertIn("upgrades", st)
+            self.assertIn("active_upgrades", st)
+            self.assertEqual(_post(base + "/input", {"pause": True}), 200)
+            self.assertEqual(_post(base + "/input", {"pause": False}), 200)
+            deadline = time.time() + 3
+            while time.time() < deadline:
+                st2 = json.loads(_get(base + "/state")[1])
+                if st2["state"] == "paused":
+                    break
+                time.sleep(0.05)
+            self.assertEqual(st2["state"], "paused")
+        finally:
+            server.stop()
+
 
 if __name__ == "__main__":
     unittest.main()
