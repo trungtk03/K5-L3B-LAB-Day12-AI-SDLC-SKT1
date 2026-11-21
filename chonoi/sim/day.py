@@ -71,7 +71,8 @@ class DaySim:
         return self.sub.time_left_ticks
 
     def current_plan(self) -> dict:
-        p = self.day_plans[self.day]
+        plan_day = ((self.day - 1) % 5) + 1
+        p = self.day_plans[plan_day]
         return {
             "dishes": dict(p["dishes"]),
             "ingredients": dict(p["ingredients"]),
