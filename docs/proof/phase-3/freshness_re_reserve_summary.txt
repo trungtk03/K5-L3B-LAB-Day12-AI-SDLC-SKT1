@@ -1,0 +1,5 @@
+=== Phase 3 Re-Reserve, Unfulfillable & Freshness Pricing Proof ===
+t1: spoiled {"item_id": "I1", "kind": "bong_sung", "location": "stock"}
+t1: spoiled {"item_id": "I3", "kind": "ca_loc", "location": "stock"}
+t1: cook_started {"stove_id": "B1", "order_id": "C1", "dish_id": "goi_bong_sung", "items": [{"id": "I2", "kind": "bong_sung", "fresh": 80}, {"id": "I4", "kind": "bong_sung", "fresh": 60}], "base_price": 28}
+Tick 1 customers: [{"id": "C1", "table_id": "T1", "dish_id": "goi_bong_sung", "order_tick": 1, "reserved": [], "state": "waiting", "patience_ticks_left": 3599, "eat_ticks_left": 0, "order_status": "assigned", "base_price": 28}, {"id": "C2", "table_id": "T2", "dish_id": "ca_loc_nuong_trui", "order_tick": 2, "reserved": [], "state": "waiting", "patience_ticks_left": 3599, "eat_ticks_left": 0, "order_status": "unfulfillable"}]

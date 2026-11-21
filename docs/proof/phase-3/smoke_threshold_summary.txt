@@ -1,0 +1,3 @@
+=== Phase 3 Threshold-30 Smoke (TICKET-03) ===
+Scenario: hold=[{id:'I1', kind:'ca_linh', fresh:30}]
+Event: {"type": "event", "tick": 1, "phase": "gather", "name": "spoiled", "data": {"item_id": "I1", "kind": "ca_linh", "location": "hold"}}

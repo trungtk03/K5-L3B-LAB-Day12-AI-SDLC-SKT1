@@ -1,14 +1,26 @@
 # Changelog
 
+## Phase 3 (`phase-3`) — 2026-11-21 — BREAKING CHANGE (Contract v1.2 “Mùa Nước Nổi”)
+
+### Breaking Changes (v1.1 → v1.2)
+- **Đổi schema kho đếm → kho cá thể (`inventory.json`, `scenario.gather.hold`, `scenario.quan.stock`, snapshot `hold`/`stock`, `gather_end.data.inventory`):**
+  - Cũ (v1.0/v1.1): `{"items": {"ca_loc": 1}}`, `hold: ["ca_loc"]`, `stock: {"ca_loc": 1}`, `customers[].reserved: {"ca_loc": 1}`.
+  - Mới (v1.2): `{"items": [{"id": "I1", "kind": "ca_loc", "fresh": 100}]}`, `hold: [{"id": "I1", "kind": "ca_loc", "fresh": 100}]`, `stock: [...]`, `customers[].reserved: ["I1"]`.
+  - File kho đếm v1.0/v1.1 bị từ chối với mã thoát `2` trước khi ghi đầu ra.
+- **Đổi payload sự kiện:**
+  - `cook_started.data.items`: mảng cá thể sắp theo `(kind, id)` thay vì dict đếm.
+  - `monster_hit.data.lost` & `faint.data.lost`: mảng cá thể theo thứ tự bỏ LIFO thay vì mảng chuỗi `kind`.
+  - `cook_started.data.base_price`: chốt theo độ tươi trung bình `floor(giá niêm yết × avg_fresh / 100)` (thay vì giá niêm yết cố định), kéo theo tiền boa tính trên `base_price` đã chốt.
+- **Cách cập nhật fixture:** Đổi mọi `hold`/`stock`/`inventory.items` sang mảng `{"id": "I1", "kind": "...", "fresh": 100}` (có sẵn tiện ích `items_v12(...)` trong `tests/helpers.py`) và đổi `customers[].reserved` sang mảng id cá thể `["I1", ...]`.
+
+### Tính năng mới & Cải tiến
+- **Manifest v1.2 (`game.contract.json`, `chonoi/contract.py`):** đặt `contract_version: "1.2"`, bổ sung `tuning.freshness = {initial: 100, gather_decay_per_s: 0.5, quan_decay_per_s: 0.25, spoiled_below: 30}`.
+- **Độ tươi chính xác (`chonoi/inventory.py`, `chonoi/sim/gather.py`, `chonoi/sim/quan.py`, `chonoi/sim/day.py`, `chonoi/sim/shop.py`):** dùng `fractions.Fraction` (`-1/120`/tick ở giỏ, `-1/240`/tick ở quán), phát `spoiled` đúng tick vượt ngưỡng `< 30` theo `id`, cấp `I1, I2, ...` tăng liên tục xuyên pha/Ngày, tự động nhả & thử giữ lại 1 lần khi hàng giữ bị ươn (chuyển `unfulfillable` nếu thiếu), `Pause` dừng hao tươi, kho dư ở Shop không hao tươi.
+- **HUD độ tươi (`chonoi/web/index.html`):** hiển thị thanh/số `%` độ tươi từng ô giỏ, cảnh báo đỏ `Ươn` khi `fresh < 30` ở cả buổi sáng, buổi tối, màn chuyển pha và Shop.
+- **Kiểm thử & Bằng chứng:** 77/77 test xanh (7 ca mới `tests/test_freshness_p3.py` + regression P1–P2 đã chuyển schema v1.2), ADR-0001, proof tại `docs/proof/phase-3/` và `docs/verification/phase-3.md`.
+
 ## Phase 2 (`phase-2`) — 2026-11-21
-- **Test Contract v1.1 (`game.contract.json`, `chonoi/{contract,inventory,inputs,scenario,headless}.py`):** Nâng cấp manifest lên `1.1`, đủ 6 nguyên liệu (`ca_keo`, `keo_neo`), 6 món ăn, 6 nút hái `N1–N6`, 2 bếp `B1–B2`, 4 bàn `T1–T4`, thông số cá bơi/sinh, Cá Sấu `M1–M2`, `day_plan` D1–D5, `shop.upgrades`, CLI `--mode day --days 1..5`, nút `pause`/`shop_done`/`buy`.
-- **Gather v1.1 (`chonoi/sim/gather.py`):** 8 đàn cá đầu ca tại 8 điểm khác nhau, cá bơi `1.5 m/s` phản xạ mép/góc + đổi hướng mỗi 120 tick + sinh cá tại `360·k` (trần 12); Cá Sấu Năm Chèo `M1` (Ngày 1) & `M2` (Ngày 3) với `patrol`/`chase`/`recoil`, chạm mất 1 Máu + rơi `floor(n/2)` LIFO + `invuln_ticks=90`, ngất `cause="monster"`.
-- **Quán, Vòng Ngày, Shop & Pause (`chonoi/sim/{quan,shop,day}.py`, `chonoi/runner.py`):** Lọc thực đơn theo `day_plan`, đổi pha cùng tick `gather → quan → shop`, Shop mua `oxygen`/`hp` (trừ `money`, giữ `earned`, áp từ Ngày kế), `pause` dừng mọi timer ở cả 3 mode.
-- **Menu, Pause & HUD (`chonoi/live.py`, `chonoi/web/index.html`):** Menu chính (`Chơi`/`Thoát`), màn `DayIntro`/`EveningIntro`/`DayResult`/`Shop`/`Summary`, menu `Pause` (`Esc`/`P`), HUD chữ không chân `≥ 18px` với cảnh báo oxy `< 25%`, giờ `≤ 30s`, kiên nhẫn `< 25%`, “Thủy quái!” + viền tím, “Hết hơi!” và kho khả dụng.
-- **Kiểm thử & Bằng chứng:** 70/70 test tự động xanh (`test_gather_p2.py`, `test_day_p2.py`, regression P1, `test_live.py`), 1 Ngày 22.200 tick chạy ~1.0s (≤ 20s), SHA-256 tất định 100%, proof tại `docs/proof/phase-2/`, `docs/verification/phase-2.md` và retro nhanh tại `docs/retro.md`.
+- Nâng cấp Test Contract v1.1: 6 nguyên liệu, 6 món, 6 nút hái, 2 bếp `B1–B2`, 4 bàn `T1–T4`, cá bơi phản xạ mép + sinh cá `360·k`, Cá Sấu `M1`/`M2`, `--mode day --days 1..5`, Shop `oxygen`/`hp`, Pause cả 3 mode, Menu & HUD.
 
 ## Phase 1 (`phase-1`) — 2026-11-21
-- **Lát 1 & Lát 2 (`chonoi/sim/gather.py`):** Hoàn thiện bơi, lặn/nổi (`dive`/`surface`), oxy, ngạt (`oxygen_empty`/`choke`), 3 Máu, ngất (`faint` mất giỏ LIFO), hái rau mặt nước (`gather`/`node_regrown`), bắt cá dưới nước (`fish_caught`), sức chứa giỏ (`hold_full`), cập bến và ghi file kho nguyên tử.
-- **Lát 3 & Lát 4 (`chonoi/sim/quan.py`):** Hoàn thiện lịch khách (`customer_arrived`/`no_dish`), giữ chỗ nguyên liệu (`reserved`), kiên nhẫn & rời quán (`customer_left`), ưu tiên tương tác (khoảng cách → Bếp trước Bàn → id), nấu (`cook_started`/`dish_ready`), bưng (`dish_picked`), phục vụ (`served`), tính boa, thanh toán (`paid`), uy tín và kết thúc ca (`quan_end`).
-- **Kiểm scenario (`chonoi/scenario.py`):** Bổ sung kiểm mâu thuẫn mức luật cho `quan` thoát mã 2 trước khi ghi đầu ra.
-- **Kiểm thử & Bằng chứng:** 54/54 test tự động xanh, ma trận truy vết `docs/verification/phase-1.md` và bằng chứng thực tế trong `docs/proof/phase-1/`.
+- Hoàn thiện 4 lát lõi v1.0 (`gather` + `quan`), kiểm mâu thuẫn scenario, E2E 2 tiến trình, skills `.agents/skills/` và bằng chứng `docs/proof/phase-1/`.

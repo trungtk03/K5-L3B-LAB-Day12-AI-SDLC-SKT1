@@ -1,0 +1,4 @@
+=== Phase 3 File Handoff Smoke (v1.2) ===
+Inventory written: {"items":[{"id":"I1","kind":"ca_linh","fresh":99.99166666666666}]}
+Quan tick-0 stock: [{"id": "I1", "kind": "ca_linh", "fresh": 99.992}]
+Legacy counted inventory exit code: 2 (stderr: đầu vào sai: items phải là mảng cá thể [{id, kind, fresh}] theo Contract v1.2)
