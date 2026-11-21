@@ -3,4 +3,5 @@ __pycache__/
 *.jsonl
 !tests/fixtures/*.jsonl
 !docs/proof/**/*.jsonl
+dist/
 .DS_Store
