@@ -225,19 +225,25 @@ function showDayIntro(s) {
 }
 
 function showEveningIntro(s) {
-  const stock = s.stock || {};
-  const stockHtml = Object.keys(stock).length
-    ? Object.entries(stock).map(([k, v]) => `<div class="row"><span>${kn(k)}</span><strong>×${v}</strong></div>`).join("")
+  const stock = Array.isArray(s.stock) ? s.stock : [];
+  const spoiledBelow = (s.tuning && s.tuning.freshness && s.tuning.freshness.spoiled_below) ?? 30;
+  const stockHtml = stock.length
+    ? stock.map((it) => {
+        const sp = it.fresh < spoiledBelow;
+        return `<div class="row"><span>${kn(it.kind)} (${it.id})</span><strong style="color:${sp ? "#ef4444" : "#86efac"}">${it.fresh.toFixed(1)}% ${sp ? "(Ươn)" : ""}</strong></div>`;
+      }).join("")
     : `<div class="row"><span>Kho rỗng — không có nguyên liệu mang về</span></div>`;
+  const freshCounts = {};
+  stock.filter((it) => it.fresh >= spoiledBelow).forEach((it) => (freshCounts[it.kind] = (freshCounts[it.kind] || 0) + 1));
   const menu = (s.tuning && s.tuning.menu) || {};
   const allowed = (s.day_plan && s.day_plan.dishes) ? Object.keys(s.day_plan.dishes) : Object.keys(menu);
-  const cookable = allowed.filter((d) => menu[d] && Object.entries(menu[d].recipe).every(([ing, q]) => (stock[ing] || 0) >= q));
+  const cookable = allowed.filter((d) => menu[d] && Object.entries(menu[d].recipe).every(([ing, q]) => (freshCounts[ing] || 0) >= q));
   const cookHtml = cookable.length
     ? cookable.map((d) => `<div class="row"><span>${dn(d)}</span><strong>${menu[d].price}k</strong></div>`).join("")
-    : `<div class="row"><span>Chưa đủ nguyên liệu nấu món nào</span></div>`;
+    : `<div class="row"><span>Chưa đủ nguyên liệu tươi nấu món nào</span></div>`;
   openInter(
     `Buổi tối Ngày ${s.day || 1} — Mở quán nhà bè`,
-    `<p style="margin:0 0 8px;color:#7dd3fc;">Nguyên liệu nhập kho:</p>${stockHtml}<p style="margin:12px 0 8px;color:#fde68a;">Món có thể nấu:</p>${cookHtml}`,
+    `<p style="margin:0 0 8px;color:#7dd3fc;">Nguyên liệu nhập kho (cá thể & độ tươi):</p>${stockHtml}<p style="margin:12px 0 8px;color:#fde68a;">Món có thể nấu:</p>${cookHtml}`,
     4000
   );
 }
@@ -288,9 +294,12 @@ function renderShop(s) {
       <button onclick="buyUpgrade('${c.id}')" ${canBuy ? "" : "disabled"}>${nxt ? `Mua (${nxt.price}k)` : "Tối đa"}</button>
     </div>`;
   }).join("");
-  const stock = s.stock || {};
-  const stockTxt = Object.keys(stock).length ? Object.entries(stock).map(([k, v]) => `${kn(k)}×${v}`).join(", ") : "(trống)";
-  document.getElementById("shopStock").textContent = `Kho dư sau ca (sẽ bỏ sau Shop): ${stockTxt}`;
+  const stock = Array.isArray(s.stock) ? s.stock : [];
+  const spoiledBelow = (s.tuning && s.tuning.freshness && s.tuning.freshness.spoiled_below) ?? 30;
+  const stockTxt = stock.length
+    ? stock.map((it) => `${kn(it.kind)} ${it.id} (${Math.round(it.fresh)}%${it.fresh < spoiledBelow ? " Ươn" : ""})`).join(", ")
+    : "(trống)";
+  document.getElementById("shopStock").textContent = `Kho dư sau ca (không hao tươi, bỏ sau Shop): ${stockTxt}`;
 }
 window.buyUpgrade = function (id) { sendRaw({ buy: id }); };
 
@@ -556,26 +565,40 @@ function drawGather(w, h) {
     text(`Độ sâu: ${p.pos[1].toFixed(1)} m${cdTxt}`, 16, 62, { size: 18, color: "#cbd5e1" });
   }
 
-  // Danh sách đã lấy / cần lấy theo day_plan
+  // Danh sách đã lấy (còn tươi) / cần lấy theo day_plan
+  const spoiledBelow = (snap.tuning && snap.tuning.freshness && snap.tuning.freshness.spoiled_below) ?? 30;
   if (snap.day_plan && snap.day_plan.ingredients) {
     const have = {};
-    (snap.hold || []).forEach((k) => (have[k] = (have[k] || 0) + 1));
+    (snap.hold || []).forEach((it) => { if (it.fresh >= spoiledBelow) have[it.kind] = (have[it.kind] || 0) + 1; });
     const parts = Object.entries(snap.day_plan.ingredients).map(([k, need]) => `${kn(k)} ${have[k] || 0}/${need}`);
-    text("Cần: " + parts.join(" · "), w - 16, 62, { size: 18, align: "right", color: "#fde68a" });
+    text("Cần (tươi): " + parts.join(" · "), w - 16, 62, { size: 18, align: "right", color: "#fde68a" });
   }
 
-  // Giỏ dưới
+  // Giỏ dưới (hiển thị từng cá thể + thanh độ tươi + dấu Ươn khi fresh < 30)
   if (snap.hold && snap.hold_capacity) {
-    const cap = snap.hold_capacity, sz = Math.min(30, (w - 300) / cap - 4), y0 = h - bottom + 10;
+    const cap = snap.hold_capacity, sz = Math.min(36, (w - 300) / cap - 4), y0 = h - bottom + 6;
+    let spoiledCount = 0;
     for (let i = 0; i < cap; i++) {
       const x0 = 16 + i * (sz + 4);
       ctx.fillStyle = "rgba(255,255,255,.12)"; ctx.fillRect(x0, y0, sz, sz);
-      if (snap.hold[i]) { ctx.fillStyle = kc(snap.hold[i]); ctx.fillRect(x0 + 3, y0 + 3, sz - 6, sz - 6); }
+      const it = snap.hold[i];
+      if (it) {
+        const sp = it.fresh < spoiledBelow;
+        if (sp) spoiledCount++;
+        ctx.fillStyle = sp ? "#7f1d1d" : kc(it.kind);
+        ctx.fillRect(x0 + 2, y0 + 2, sz - 4, sz - 8);
+        // Thanh độ tươi phía dưới ô
+        ctx.fillStyle = "rgba(0,0,0,.6)"; ctx.fillRect(x0 + 2, y0 + sz - 6, sz - 4, 4);
+        ctx.fillStyle = sp ? "#ef4444" : (it.fresh < 60 ? "#f59e0b" : "#4ade80");
+        ctx.fillRect(x0 + 2, y0 + sz - 6, (sz - 4) * Math.max(0, Math.min(1, it.fresh / 100)), 4);
+        text(sp ? "Ươn" : Math.round(it.fresh) + "", x0 + sz / 2, y0 + sz - 10, { size: 11, align: "center", color: "#fff", bold: true });
+      }
     }
     const counts = {};
-    snap.hold.forEach((k) => (counts[k] = (counts[k] || 0) + 1));
+    snap.hold.forEach((it) => (counts[it.kind] = (counts[it.kind] || 0) + 1));
     const txt = Object.keys(counts).map((k) => `${kn(k)}×${counts[k]}`).join(", ");
-    text(`Giỏ ${snap.hold.length}/${cap}: ${txt || "(trống)"}`, 16, h - 14, { size: 18, color: "#e2e8f0" });
+    const spTxt = spoiledCount > 0 ? ` · ⚠ ${spoiledCount} ươn` : "";
+    text(`Giỏ ${snap.hold.length}/${cap}: ${txt || "(trống)"}${spTxt}`, 16, h - 10, { size: 18, color: spoiledCount > 0 ? "#fca5a5" : "#e2e8f0" });
   }
   text("Esc/P: Tạm dừng", w - 16, h - 14, { size: 18, align: "right", color: "#94a3b8" });
 }
@@ -633,18 +656,21 @@ function drawQuan(w, h) {
     }
   }
 
-  // Tính kho khả dụng = stock - reserved
-  const avail = Object.assign({}, snap.stock || {});
-  (snap.customers || []).forEach((c) => {
-    for (const [k, q] of Object.entries(c.reserved || {})) avail[k] = Math.max(0, (avail[k] || 0) - q);
-  });
-  const availTxt = Object.entries(avail).filter(([, v]) => v > 0).map(([k, v]) => `${kn(k)}×${v}`).join(", ");
+  // Kho cá thể khả dụng (tươi chưa giữ chỗ) & báo số lượng ươn
+  const spoiledBelow = (snap.tuning && snap.tuning.freshness && snap.tuning.freshness.spoiled_below) ?? 30;
+  const reservedSet = new Set();
+  (snap.customers || []).forEach((c) => (c.reserved || []).forEach((rid) => reservedSet.add(rid)));
+  const stockArr = Array.isArray(snap.stock) ? snap.stock : [];
+  const availFresh = stockArr.filter((it) => !reservedSet.has(it.id) && it.fresh >= spoiledBelow);
+  const spoiledArr = stockArr.filter((it) => it.fresh < spoiledBelow);
+  const availTxt = availFresh.slice(0, 8).map((it) => `${kn(it.kind)}(${Math.round(it.fresh)}%)`).join(", ") + (availFresh.length > 8 ? "…" : "");
+  const spTxt = spoiledArr.length ? ` · ⚠ ${spoiledArr.length} ươn` : "";
 
   // HUD tối (chữ >= 18px)
   const lowTime = (snap.time_left_ticks || 0) <= 30 * 60;
   text((snap.day ? `Ngày ${snap.day} · ` : "") + "⏱ " + fmtTime(snap.time_left_ticks), 16, 32, { size: 22, color: lowTime ? "#f87171" : "#f8fafc", bold: true });
   text(`Tiền ${snap.money ?? 0}k · Thu ${snap.earned ?? 0}k · Uy tín ${(snap.reputation ?? 0).toFixed(1)} · Điểm ${snap.score ?? 0}`, 220, 32, { size: 20, color: "#fde68a", bold: true });
-  text(`Kho khả dụng: ${availTxt || "(trống)"}`, 16, 68, { size: 18, color: "#e2e8f0" });
+  text(`Kho tươi khả dụng: ${availTxt || "(trống)"}${spTxt}`, 16, 68, { size: 18, color: spoiledArr.length ? "#fca5a5" : "#e2e8f0" });
   text(`Trên tay: ${snap.hand ? dn(snap.hand.dish_id) : "(rỗng)"}`, w - 16, 68, { size: 18, align: "right", color: "#7dd3fc" });
   text("WASD/Mũi tên đi · E tương tác bếp/bàn · Esc/P tạm dừng", w - 16, h - 16, { size: 18, align: "right", color: "#94a3b8" });
 }

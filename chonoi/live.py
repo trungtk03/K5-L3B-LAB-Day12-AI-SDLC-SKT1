@@ -57,7 +57,7 @@ class LiveGame:
             "day_shift_earned": 0,
             "day_rep_start": float(self.session.sim.reputation),
             "day_rep_delta": 0.0,
-            "last_gather_inventory": {},
+            "last_gather_inventory": [],
             "dish_sales": {},
         }
 
@@ -100,7 +100,7 @@ class LiveGame:
             st["day_rep_start"] = float(self.session.sim.reputation)
             st["day_rep_delta"] = 0.0
         elif name == "gather_end":
-            st["last_gather_inventory"] = dict(data.get("inventory", {}).get("items", {}))
+            st["last_gather_inventory"] = list(data.get("inventory", {}).get("items", []))
         elif name == "served":
             dish = data.get("dish_id")
             if dish:
