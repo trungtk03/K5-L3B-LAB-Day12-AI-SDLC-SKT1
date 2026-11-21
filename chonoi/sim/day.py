@@ -1,11 +1,9 @@
-"""Chế độ Vòng Ngày (`day`, Contract v1.1): gather -> quan -> shop qua 1..5 Ngày.
+"""Chế độ Vòng Ngày (`day`, Contract v1.2): gather -> quan -> shop qua 1..5 Ngày.
 
-Thứ tự đổi pha (mục 4.5):
-  - Đầu Ngày: `day_start` -> `day_plan` -> `phase_start` (gather, tick 0 hoặc cùng tick sau shop_end).
-  - Sau `gather_end`: dựng `QuanSim` với kho bàn giao (kể cả khi `fainted` -> kho rỗng) và phát `phase_start` (quan) cùng tick.
-  - Sau `quan_end`: dựng `ShopSim` và phát `phase_start` (shop) cùng tick.
-  - Sau `shop_end`: tăng `days_completed`; nếu đủ `--days` thì kết thúc (`days_complete`),
-    ngược lại sao `upgrades -> active_upgrades`, tăng `day` và dựng Ngày mới cùng tick.
+Cập nhật v1.2:
+  - Giữ chung `self.item_ids` xuyên pha và xuyên Ngày (I1, I2, ... tiếp tục tăng kể cả sau khi dùng/bỏ).
+  - Ngày 1 giữ nguyên id trong mẫu `gather.hold`; Ngày 2+ cấp id mới theo thứ tự mảng với kind/fresh ban đầu.
+  - Bàn giao kho cá thể trong bộ nhớ giữ nguyên độ chính xác Fraction, không hao thêm lúc chuyển pha.
 """
 
 import copy
@@ -24,6 +22,7 @@ class DaySim:
         self.tuning = tuning
         self.rng = streams
         self.total_days = int(days)
+        self.item_ids = IdAllocator()
 
         day_blk = scenario.get("day", {}) if isinstance(scenario, dict) else {}
         self.gather_tpl = copy.deepcopy(scenario.get("gather", {})) if isinstance(scenario, dict) else {}
@@ -94,6 +93,8 @@ class DaySim:
             money=self.money,
             earned=self.earned,
             reputation=self.reputation,
+            item_ids=self.item_ids,
+            reallocate_hold_ids=(day_num > 1),
         )
         plan = self.current_plan()
         out_events.append(("gather", day_num, "day_start", {}))
@@ -115,7 +116,7 @@ class DaySim:
         out = [(cur_phase, cur_day, name, data) for name, data in sub_events]
 
         if cur_phase == "gather" and self.sub.done:
-            inv = self.sub.inventory_items()
+            inv = self.sub.inventory_internal()
             plan = self.current_plan()
             self.sub = QuanSim(
                 self.tuning,
@@ -134,7 +135,7 @@ class DaySim:
             self.money = self.sub.money
             self.earned = self.sub.earned
             self.reputation = self.sub.reputation
-            leftover = dict(self.sub.stock)
+            leftover = list(self.sub.stock)
             self.sub = ShopSim(
                 self.tuning,
                 leftover,
@@ -157,7 +158,6 @@ class DaySim:
                 self._start_gather_day(self.day + 1, out)
 
         else:
-            # Đồng bộ money/earned/reputation liên tục để snapshot luôn chính xác trong mọi pha
             self.money = self.sub.money
             self.earned = self.sub.earned
             self.reputation = self.sub.reputation

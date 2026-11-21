@@ -1,9 +1,12 @@
-"""Cửa hàng cuối ngày (`shop`, Contract v1.1).
+"""Cửa hàng cuối ngày (`shop`, Contract v1.2).
 
-Mua nâng cấp theo dữ liệu (`oxygen`, `hp`), trừ `money`, giữ `earned` và `score`.
-Cấp vừa mua cập nhật ngay vào `upgrades`, có hiệu lực từ Ngày kế tiếp (`active_upgrades`).
-Xử lý một `buy` trước cạnh `shop_done`, kể cả ở bước cuối (`max_ticks = 600`).
+- Kho dư `stock` là mảng cá thể `{id, kind, fresh}`, không hao tươi trong Shop.
+- Mua nâng cấp theo dữ liệu (`oxygen`, `hp`), trừ `money`, giữ `earned` và `score`.
+- Xử lý một `buy` trước cạnh `shop_done`, kể cả ở bước cuối (`max_ticks = 600`).
 """
+
+from ..ids import sort_by_id
+from ..inventory import item_public
 
 
 class ShopSim:
@@ -12,7 +15,7 @@ class ShopSim:
 
     def __init__(self, tuning, stock, money, earned, reputation, upgrades):
         self.cfg = tuning["shop"]
-        self.stock = {k: v for k, v in sorted(stock.items()) if v > 0}
+        self.stock = [dict(it) for it in sort_by_id(list(stock))]
         self.money = int(money)
         self.earned = int(earned)
         self.reputation = float(reputation)
@@ -24,7 +27,7 @@ class ShopSim:
 
     def snapshot(self) -> dict:
         return {
-            "stock": {k: self.stock[k] for k in sorted(self.stock) if self.stock[k] > 0},
+            "stock": [item_public(it) for it in sort_by_id(self.stock)],
         }
 
     def step(self, inp):

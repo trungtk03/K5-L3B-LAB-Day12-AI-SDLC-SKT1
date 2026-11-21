@@ -1,5 +1,5 @@
 {
-  "contract_version": "1.1",
+  "contract_version": "1.2",
   "team": "SKT1",
   "team_size": 2,
   "build_cmd": "true",
@@ -154,6 +154,12 @@
           {"level": 2, "price": 500, "hp_max": 5}
         ]
       }
+    },
+    "freshness": {
+      "initial": 100,
+      "gather_decay_per_s": 0.5,
+      "quan_decay_per_s": 0.25,
+      "spoiled_below": 30
     },
     "score": {"reputation_multiplier": 100}
   }

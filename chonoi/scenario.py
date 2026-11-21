@@ -10,7 +10,7 @@ import math
 
 from .contract import compute_plan_ingredients
 from .errors import BadInput
-from .inventory import KINDS, validate_items
+from .inventory import KINDS, validate_item_list
 
 GATHER_KEYS = {"player", "hold", "nodes", "fish", "random_fish", "monsters", "time_left_ticks"}
 GATHER_PLAYER_KEYS = {"pos", "vel", "heading_deg", "hp", "oxygen_ticks", "zero_oxy_ticks",
@@ -182,9 +182,7 @@ def _validate_gather_block(b, tuning, upgrades=None):
     if "random_fish" in b and not isinstance(b["random_fish"], bool):
         raise BadInput("random_fish phải là boolean")
     if "hold" in b:
-        h = b["hold"]
-        if not isinstance(h, list) or any(k not in KINDS for k in h):
-            raise BadInput("hold phải là mảng id nguyên liệu hợp lệ")
+        h = validate_item_list(b["hold"], field_name="gather.hold")
         if len(h) > g["hold_capacity"]:
             raise BadInput("hold vượt sức chứa")
     p = b.get("player", {})
@@ -301,7 +299,7 @@ def _validate_quan_block(b, tuning, in_day=False):
         if not _num(rep) or not (q["reputation_min"] <= rep <= q["reputation_max"]):
             raise BadInput(f"quan.reputation phải trong [{q['reputation_min']}, {q['reputation_max']}]")
     if "stock" in b:
-        validate_items(b["stock"])
+        validate_item_list(b["stock"], field_name="quan.stock")
     p = b.get("player", {})
     if not isinstance(p, dict) or set(p) - QUAN_PLAYER_KEYS:
         raise BadInput("quan.player chỉ có pos và vel")
@@ -365,7 +363,7 @@ def _validate_quan_block(b, tuning, in_day=False):
             raise BadInput(f"customers.{c['id']}: state không hợp lệ: {st!r}")
         if "order_status" in c:
             os_val = c["order_status"]
-            if os_val not in ("reserved", "assigned", "served"):
+            if os_val not in ("reserved", "assigned", "served", "unfulfillable"):
                 raise BadInput(f"customers.{c['id']}: order_status không hợp lệ: {os_val!r}")
             if st == "eating" and os_val != "served":
                 raise BadInput(f"customers.{c['id']}: khách eating phải có order_status='served'")
@@ -375,7 +373,11 @@ def _validate_quan_block(b, tuning, in_day=False):
             if tk in c:
                 _nonneg_int(f"customers.{c['id']}.{tk}", c[tk])
         if "reserved" in c:
-            validate_items(c["reserved"])
+            res = c["reserved"]
+            if not isinstance(res, list) or any(not isinstance(rid, str) or not rid for rid in res):
+                raise BadInput(f"customers.{c['id']}.reserved phải là mảng id cá thể (chuỗi khác rỗng)")
+            if len(res) != len(set(res)):
+                raise BadInput(f"customers.{c['id']}.reserved có id trùng lặp")
         if st == "eating":
             bp, tip = c.get("base_price"), c.get("tip")
             if isinstance(bp, bool) or not isinstance(bp, int) or bp <= 0:
