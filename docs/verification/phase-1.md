@@ -1,8 +1,20 @@
-# Ma trận truy vết Phase 1
+# Ma trận truy vết Phase 1 — Nhóm SKT1
 
 | AC | Cách kiểm chứng | Bằng chứng (link `docs/proof/phase-1/...`) | Kết quả (đạt / chưa đạt — ghi trung thực) |
 |---|---|---|---|
+| **AC-1 (Lát 1 — Gather: bơi, lặn/nổi, oxy, ngạt, 3 Máu, ngất LIFO, chặn biên)** | Chạy unit/headless test `tests/test_smoke_p1.py` (`Movement`) và `tests/test_gather_lat1.py` (5 ca: `dive`/`surface`, `oxygen_empty`, `choke` mỗi 60 tick, hồi oxy mặt nước, `faint` mất giỏ LIFO và kho rỗng) | [unittest.log](../proof/phase-1/unittest.log) | **Đạt** (100% test xanh) |
+| **AC-2 (Lát 2 — Gather: hái rau mặt nước, bắt cá dưới nước, sức chứa giỏ, cập bến, xuất kho)** | Chạy `tests/test_gather_lat2.py` (5 ca: `gather`/`regrow`, `hold_full` khi hái & bắt cá, `fish_caught`/cooldown, ưu tiên `id` khi hòa khoảng cách) và smoke cập bến `test_inv_01_*` | [unittest.log](../proof/phase-1/unittest.log), [e2e_gather.jsonl](../proof/phase-1/e2e_gather.jsonl), [e2e_inventory.json](../proof/phase-1/e2e_inventory.json) | **Đạt** (100% test xanh) |
+| **AC-3 (Lát 3 — Quan: khách đến theo lịch, chọn món đủ kho khả dụng, giữ chỗ nguyên liệu, kiên nhẫn, rời quán, `no_dish`)** | Chạy `tests/test_quan_lat3_lat4.py` (`test_quan_lat3_01`..`05`: `no_dish` ở tick 120 & 1020, `customer_arrived` + `reserved`, `customer_left` trừ uy tín & nhả giữ chỗ, `random_customers=false`) | [unittest.log](../proof/phase-1/unittest.log), [e2e_quan.jsonl](../proof/phase-1/e2e_quan.jsonl) | **Đạt** (100% test xanh) |
+| **AC-4 (Lát 4 — Quan: bếp nấu, chín, bưng, phục vụ, boa, thanh toán, uy tín, kết thúc ca `quan_end`)** | Chạy `tests/test_quan_lat3_lat4.py` (`test_quan_lat4_01`..`04`: `cook_started` → `dish_ready` → `dish_picked` → `served` có/không boa → `paid`, ưu tiên Bếp trước Bàn & đơn cũ nhất, chốt ca `closing`) | [unittest.log](../proof/phase-1/unittest.log), [e2e_summary.txt](../proof/phase-1/e2e_summary.txt) | **Đạt** (100% test xanh) |
+| **AC-5 (Liên thông 2 tiến trình qua `inventory.json` & hợp đồng kho v1.0)** | Chạy smoke `test_inv_01_gather_writes_inventory_quan_reads_it` và E2E 2 tiến trình (`gather` bắt cá lóc + cập bến → `e2e_inventory.json` → `quan` đọc `--inventory` → nấu, phục vụ, thu `72` và `score = 372`) | [e2e_summary.txt](../proof/phase-1/e2e_summary.txt), [e2e_inventory.json](../proof/phase-1/e2e_inventory.json), [e2e_gather.jsonl](../proof/phase-1/e2e_gather.jsonl), [e2e_quan.jsonl](../proof/phase-1/e2e_quan.jsonl) | **Đạt** (100% khớp hợp đồng) |
+| **AC-6 (Test Contract v1.0: tính tất định từng byte & mã thoát 2 khi đầu vào/scenario sai)** | Chạy `test_con_01`..`03`, `test_quan_scenario_contradictions_exit_2` (giữ chỗ vượt kho, đơn `assigned` thiếu món, khách `eating` thiếu giá/tip) và đối chiếu SHA-256 2 lần chạy độc lập cho cả `gather` & `quan` | [determinism_check.txt](../proof/phase-1/determinism_check.txt), [unittest.log](../proof/phase-1/unittest.log) | **Đạt** (SHA-256 khớp từng byte) |
+| **AC-7 (Chơi trực tiếp trình duyệt & HUD đọc được)** | Chạy `tests/test_live.py` (`LiveServerTest.test_state_input_and_clean_stop`) và xác minh snapshot đầy đủ trường cho `chonoi/web/index.html` (thời gian, oxy, Máu, giỏ, kho, bếp, món trên tay, khách, kiên nhẫn, tiền, uy tín, điểm) | [unittest.log](../proof/phase-1/unittest.log) | **Đạt** |
+| **AC-8 (Tài liệu bàn giao DoD: `README.md`, `TEAM.md`, `game.contract.json`, `docs/contracts/`, ghi chép nhóm, `AGENTS.md` + skills)** | Rà soát trực tiếp toàn bộ file DoD trong PRD-0 mục 7 và kiểm `team_size: 2` khớp `TEAM.md` | [unittest.log](../proof/phase-1/unittest.log) | **Đạt** (xem ghi chú `team_size` bên dưới) |
 
 ## Đánh giá ngắn
-- Yêu cầu nào đạt / chưa đạt:
-- Điều cần chỉnh cho phase sau:
+- **Yêu cầu nào đạt / chưa đạt:**
+  - **Đạt toàn bộ lõi kỹ thuật và tài liệu Phase 1:** 54/54 ca kiểm thử tự động đều xanh (`test_smoke_p1`, `test_gather_lat1`, `test_gather_lat2`, `test_quan_lat3_lat4`, `test_python_starter_units`, `test_live`, `test_team_check`); E2E 2 tiến trình nối kho thành công; đầu ra JSONL tất định 100% từng byte (khớp SHA-256).
+  - **Ghi chú trung thực:** Nhóm SKT1 có thực tế 2 thành viên (`DungNguyen74`, `trungtk03`), khớp `team_size: 2` trong `game.contract.json` và `TEAM.md`, nhưng script cảnh báo `tools/check_team.py` mặc định gợi ý quy mô 4–6 người (đã ghi nhận tại `docs/clarify.md`).
+- **Điều cần chỉnh cho phase sau:**
+  - Nâng cấp đồ họa/HUD miền Tây Nam Bộ chi tiết hơn trong `chonoi/web/index.html` (hiển thị tách biệt kho tổng và kho khả dụng, hoạt ảnh nước/khói bếp, lời thoại giọng Nam Bộ) mà không làm đổi hợp đồng headless.
+  - Chuẩn bị kiến trúc chuyển tiếp chế độ `day` và các thực thể mở rộng của Phase 2 trên nền `Streams` tách luồng.

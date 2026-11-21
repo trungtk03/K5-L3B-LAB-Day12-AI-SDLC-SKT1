@@ -1,0 +1,11 @@
+=== Byte-for-Byte Determinism Check (SHA-256) ===
+
+gather (--seed 42 --ticks 300):
+  run 1 SHA-256: 1abf4bfbff05a1613b8a1b5c21973c0464bb516a48c919d68221f7080713fac8
+  run 2 SHA-256: 1abf4bfbff05a1613b8a1b5c21973c0464bb516a48c919d68221f7080713fac8
+  match: EXACT (100% byte-identical)
+
+quan (--seed 42 --ticks 600):
+  run 1 SHA-256: e9c6e9948f1ee50d66c53a5f9b78dce0545407a47105b423f0cd81e75bdfc746
+  run 2 SHA-256: e9c6e9948f1ee50d66c53a5f9b78dce0545407a47105b423f0cd81e75bdfc746
+  match: EXACT (100% byte-identical)

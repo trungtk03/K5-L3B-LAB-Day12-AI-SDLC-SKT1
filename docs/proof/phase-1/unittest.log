@@ -1,0 +1,85 @@
+test_lat1_01_dive_and_surface_events (test_gather_lat1.TestGatherLat1.test_lat1_01_dive_and_surface_events)
+Bơi xuống dưới surface_depth (0.5m) phát 'dive', bơi lên lại phát 'surface'. ... ok
+test_lat1_02_oxygen_empty_event (test_gather_lat1.TestGatherLat1.test_lat1_02_oxygen_empty_event)
+Dưới nước: oxy trừ dần, khi chạm 0 phát oxygen_empty. ... ok
+test_lat1_03_choke_every_60_ticks (test_gather_lat1.TestGatherLat1.test_lat1_03_choke_every_60_ticks)
+Khi oxy = 0 dưới nước, mỗi 60 tick bị choke trừ 1 HP. ... ok
+test_lat1_04_surface_resets_zero_oxy_ticks_and_refills (test_gather_lat1.TestGatherLat1.test_lat1_04_surface_resets_zero_oxy_ticks_and_refills)
+Nổi lên mặt nước reset zero_oxy_ticks và hồi 6 tick oxy/bước. ... ok
+test_lat1_05_faint_empties_inventory_and_ends_gather (test_gather_lat1.TestGatherLat1.test_lat1_05_faint_empties_inventory_and_ends_gather)
+Khi Máu về 0 -> ngất (faint), mất hết giỏ (LIFO), gather_end fainted, file kho rỗng. ... ok
+test_lat2_01_gather_node_and_regrow (test_gather_lat2.TestGatherLat2.test_lat2_01_gather_node_and_regrow)
+Hái nút khi ở mặt nước: thêm nguyên liệu, phát gather, đặt regrow_ticks. ... ok
+test_lat2_02_gather_hold_full (test_gather_lat2.TestGatherLat2.test_lat2_02_gather_hold_full)
+Hái khi giỏ đã đầy phát hold_full, nút giữ nguyên. ... ok
+test_lat2_03_catch_fish_and_cooldown (test_gather_lat2.TestGatherLat2.test_lat2_03_catch_fish_and_cooldown)
+Bắt cá dưới nước: xóa đàn cá, thêm yield vào giỏ, đặt hồi chiêu catch_cooldown. ... ok
+test_lat2_04_catch_fish_hold_full (test_gather_lat2.TestGatherLat2.test_lat2_04_catch_fish_hold_full)
+Bắt cá khi giỏ không đủ chỗ phát hold_full, giữ nguyên cá và không hồi chiêu. ... ok
+test_lat2_05_tie_breaking_by_id (test_gather_lat2.TestGatherLat2.test_lat2_05_tie_breaking_by_id)
+Hai nút cách đều vị trí người chơi: ưu tiên nút có id nhỏ hơn. ... ok
+test_state_input_and_clean_stop (test_live.LiveServerTest.test_state_input_and_clean_stop) ... ok
+test_bad_frames_raise (test_python_starter_units.Units.test_bad_frames_raise) ... ok
+test_catch_is_a_v10_button_and_attack_is_not (test_python_starter_units.Units.test_catch_is_a_v10_button_and_attack_is_not) ... ok
+test_id_allocator_continues_after_max (test_python_starter_units.Units.test_id_allocator_continues_after_max) ... ok
+test_id_sorting (test_python_starter_units.Units.test_id_sorting) ... ok
+test_input_edges_and_inherit (test_python_starter_units.Units.test_input_edges_and_inherit) ... ok
+test_live_inputs_keep_fast_tap_edge (test_python_starter_units.Units.test_live_inputs_keep_fast_tap_edge) ... ok
+test_session_steps_gather_and_dock (test_python_starter_units.Units.test_session_steps_gather_and_dock) ... ok
+test_e2e_two_process_gather_to_quan_full_cycle (test_quan_lat3_lat4.TestQuanLat3Lat4.test_e2e_two_process_gather_to_quan_full_cycle)
+E2E 2 tiến trình: buổi sáng lặn bắt cá lóc + cập bến ghi kho -> buổi tối đọc kho, nấu, phục vụ, thu tiền. ... ok
+test_quan_00_starter_fixture (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_00_starter_fixture)
+Khung kiểm thử mẫu: Quán khởi động bình thường với bàn T1 và bếp B1. ... ok
+test_quan_lat3_01_no_dish_when_stock_empty (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat3_01_no_dish_when_stock_empty)
+Kho rỗng -> tick 120 và tick 1020 phát no_dish, không có khách. ... ok
+test_quan_lat3_02_customer_arrived_and_reserves_ingredients (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat3_02_customer_arrived_and_reserves_ingredients)
+Kho đủ 1 món -> tick 120 sinh khách C1 tại T1 và giữ chỗ nguyên liệu (chưa trừ kho). ... ok
+test_quan_lat3_03_deterministic_bytes_same_seed (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat3_03_deterministic_bytes_same_seed)
+Cùng seed và cùng kho -> JSONL buổi tối giống hệt nhau từng byte. ... ok
+test_quan_lat3_04_patience_expiry_reputation_and_release_reserve (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat3_04_patience_expiry_reputation_and_release_reserve)
+Khách hết kiên nhẫn: rời quán, trừ 0.5 uy tín (kẹp >= 0), nhả nguyên liệu giữ chỗ cho khách sau. ... ok
+test_quan_lat3_05_random_customers_false (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat3_05_random_customers_false)
+random_customers=false tắt lịch sinh khách tự động. ... ok
+test_quan_lat4_01_full_cook_pick_serve_pay_with_tip (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat4_01_full_cook_pick_serve_pay_with_tip)
+Luồng đầy đủ: cook_started -> dish_ready -> dish_picked -> served (có boa) -> paid -> tăng uy tín & điểm. ... ok
+test_quan_lat4_02_serve_low_patience_no_tip (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat4_02_serve_low_patience_no_tip)
+Phục vụ khi kiên nhẫn < 50%: tip = 0, không tăng uy tín. ... ok
+test_quan_lat4_03_closing_time_settles_eating_and_waiting (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat4_03_closing_time_settles_eating_and_waiting)
+Hết giờ ca: khách đang ăn trả tiền ngay (closing); khách đang chờ rời đi không trừ uy tín. ... ok
+test_quan_lat4_04_tie_breaking_stove_before_table_and_oldest_order (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_lat4_04_tie_breaking_stove_before_table_and_oldest_order)
+Unit test ưu tiên: khi khoảng cách bằng nhau -> Bếp trước Bàn; chọn đơn reserved cũ nhất. ... ok
+test_quan_scenario_contradictions_exit_2 (test_quan_lat3_lat4.TestQuanLat3Lat4.test_quan_scenario_contradictions_exit_2)
+Các mâu thuẫn mức luật trong scenario phải thoát mã 2 trước khi ghi file đầu ra. ... ok
+test_con_01_ticks_zero_and_end_line (test_smoke_p1.Contract.test_con_01_ticks_zero_and_end_line) ... ok
+test_con_02_deterministic_bytes (test_smoke_p1.Contract.test_con_02_deterministic_bytes) ... ok
+test_con_03_bad_input_exit_2 (test_smoke_p1.Contract.test_con_03_bad_input_exit_2) ... ok
+test_con_03_old_and_future_modes_rejected (test_smoke_p1.Contract.test_con_03_old_and_future_modes_rejected) ... ok
+test_gather_snapshot_has_gather_fields (test_smoke_p1.Contract.test_gather_snapshot_has_gather_fields) ... ok
+test_scenario_out_of_domain_exit_2 (test_smoke_p1.Contract.test_scenario_out_of_domain_exit_2) ... ok
+test_inv_01_gather_writes_inventory_quan_reads_it (test_smoke_p1.Integration.test_inv_01_gather_writes_inventory_quan_reads_it)
+Ví dụ smoke test trong PRD-0 mục G: cập bến ở tick 0, quán đọc kho đúng nội dung. ... ok
+test_inv_01_not_written_when_tick_limit_first (test_smoke_p1.Integration.test_inv_01_not_written_when_tick_limit_first) ... ok
+test_inv_bad_schema_exit_2 (test_smoke_p1.Integration.test_inv_bad_schema_exit_2) ... ok
+test_inventory_and_scenario_stock_conflict (test_smoke_p1.Integration.test_inventory_and_scenario_stock_conflict) ... ok
+test_inventory_flags_mode_mismatch_exit_2 (test_smoke_p1.Integration.test_inventory_flags_mode_mismatch_exit_2) ... ok
+test_move_01_swim_speed_after_ramp (test_smoke_p1.Movement.test_move_01_swim_speed_after_ramp)
+Bỏ 6 tick tăng tốc rồi đo 60 tick: quãng ≈ swim_speed × 1 s (±0.1). Ngang, xuống, chéo (không nhanh hơn). ... ok
+test_move_02_heading_positive_is_down (test_smoke_p1.Movement.test_move_02_heading_positive_is_down) ... ok
+test_move_03_edge_clamp (test_smoke_p1.Movement.test_move_03_edge_clamp)
+Chặn từng mép của vùng nước, kể cả d không âm (không bay lên khỏi mặt nước) và đáy d = 30. ... ok
+test_move_mep_vel_ve_0 (test_smoke_p1.Movement.test_move_mep_vel_ve_0) ... ok
+test_move_ramp_doi_huong_trong_tran (test_smoke_p1.Movement.test_move_ramp_doi_huong_trong_tran)
+Đảo từ +speed sang -speed: vận tốc chạm mục tiêu sau tối đa ramp_max_ticks tick kể từ lúc đổi input. ... ok
+test_time_ends_gather_and_keeps_hold (test_smoke_p1.Movement.test_time_ends_gather_and_keeps_hold) ... ok
+test_khoi_sai_mode_exit_2 (test_smoke_p1.ScenarioModes.test_khoi_sai_mode_exit_2) ... ok
+test_quan_fixture_khong_hop_le_exit_2 (test_smoke_p1.ScenarioModes.test_quan_fixture_khong_hop_le_exit_2) ... ok
+test_quan_player_vel_hop_le (test_smoke_p1.ScenarioModes.test_quan_player_vel_hop_le) ... ok
+test_good (test_team_check.TeamCheck.test_good) ... ok
+test_template_is_rejected (test_team_check.TeamCheck.test_template_is_rejected) ... ok
+test_too_few_members (test_team_check.TeamCheck.test_too_few_members) ... ok
+test_wrong_size_duplicate_and_outsider (test_team_check.TeamCheck.test_wrong_size_duplicate_and_outsider) ... ok
+
+----------------------------------------------------------------------
+Ran 54 tests in 15.951s
+
+OK
