@@ -43,19 +43,33 @@
   .shop-item { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); border-radius: 12px; padding: 16px; }
   .shop-item h3 { margin: 0 0 6px; color: #7dd3fc; font-size: 20px; }
   .badge { display: inline-block; background: rgba(245,158,11,.2); color: #fde68a; border-radius: 999px; padding: 2px 10px; font-size: 15px; }
+  body.hc { background: #000 !important; color: #fff !important; }
+  body.hc .card { background: #000 !important; border: 3px solid #ffff00 !important; }
+  body.hc .card h1, body.hc .card h2 { color: #ffff00 !important; }
+  body.hc .card p, body.hc .list { color: #ffffff !important; }
+  body.hc button { background: #ffff00 !important; color: #000 !important; border: 2px solid #fff !important; }
+  body.hc button.secondary { background: #000 !important; color: #ffff00 !important; border: 2px solid #ffff00 !important; }
+  #hcFloat {
+    position: fixed; top: 10px; right: 16px; z-index: 15;
+    padding: 6px 14px; font-size: 16px; border-radius: 8px;
+    background: rgba(15, 23, 42, 0.85); color: #fde68a; border: 2px solid #f59e0b;
+  }
+  body.hc #hcFloat { background: #000 !important; color: #ffff00 !important; border: 2px solid #ffff00 !important; }
 </style>
 </head>
 <body>
 <canvas id="c"></canvas>
+<button id="hcFloat" title="Bật/tắt chế độ tương phản cao (Phím H)">◐ Tương phản cao (H)</button>
 
 <!-- Menu chính -->
 <div id="menuOverlay" class="overlay show">
   <div class="card">
     <h1>Quán Ăn Chợ Nổi — Rạch Sen</h1>
     <p>Sáng Út Sen lặn bắt cá, hái rau trên sông Chín Khúc. Tối mở nhà bè nấu món phục vụ khách và nâng cấp đồ nghề.</p>
-    <p style="font-size:16px;color:#94a3b8;">WASD / Mũi tên: di chuyển · E: hái / bến / bếp / bàn · Space: bắt cá · Esc / P: tạm dừng · R: chơi lại</p>
+    <p style="font-size:16px;color:#94a3b8;">WASD / Mũi tên: di chuyển · E: hái / bến / bếp / bàn · Space: bắt cá · Esc / P: tạm dừng · H: tương phản cao · R: chơi lại</p>
     <div class="btns">
       <button id="btnPlay">Chơi</button>
+      <button id="btnMenuHC" class="secondary">◐ Tương phản cao: TẮT</button>
       <button id="btnQuit" class="secondary">Thoát</button>
     </div>
   </div>
@@ -90,9 +104,10 @@
 <div id="pauseOverlay" class="overlay">
   <div class="card">
     <h2>Tạm dừng</h2>
-    <p>Đồng hồ và toàn bộ bộ đếm gameplay đã dừng.</p>
+    <p>Đồng hồ và toàn bộ bộ đếm gameplay (kể cả hao tươi và Shop) đã dừng.</p>
     <div class="btns">
       <button id="btnResume">Tiếp tục</button>
+      <button id="btnPauseHC" class="secondary">◐ Tương phản cao: TẮT</button>
       <button id="btnBackMenu" class="secondary">Về menu</button>
     </div>
   </div>
@@ -140,6 +155,27 @@ let screenState = "menu"; // "menu" | "inter" | "playing" | "pause" | "shop" | "
 let lastPhaseKey = "";
 let interTimer = null;
 let wantSimPaused = true;
+let highContrast = localStorage.getItem("chonoi_high_contrast") === "1";
+
+function applyHighContrast() {
+  document.body.classList.toggle("hc", highContrast);
+  const label = `◐ Tương phản cao: ${highContrast ? "BẬT" : "TẮT"}`;
+  const b1 = document.getElementById("btnMenuHC");
+  const b2 = document.getElementById("btnPauseHC");
+  const b3 = document.getElementById("hcFloat");
+  if (b1) b1.textContent = label;
+  if (b2) b2.textContent = label;
+  if (b3) b3.textContent = highContrast ? "◐ Tương phản cao: BẬT (H)" : "◐ Tương phản cao (H)";
+}
+function toggleHighContrast() {
+  highContrast = !highContrast;
+  localStorage.setItem("chonoi_high_contrast", highContrast ? "1" : "0");
+  applyHighContrast();
+}
+applyHighContrast();
+document.getElementById("hcFloat").onclick = toggleHighContrast;
+document.getElementById("btnMenuHC").onclick = toggleHighContrast;
+document.getElementById("btnPauseHC").onclick = toggleHighContrast;
 
 // ---------- input ----------
 const down = new Set();
@@ -364,6 +400,10 @@ document.getElementById("btnSumMenu").onclick = () => document.getElementById("b
 function keyName(e) { return e.key.toLowerCase(); }
 addEventListener("keydown", (e) => {
   const k = keyName(e);
+  if (k === "h" && !e.repeat) {
+    toggleHighContrast();
+    return;
+  }
   if (screenState === "inter") {
     e.preventDefault();
     document.getElementById("btnInterNext").click();
@@ -462,15 +502,21 @@ function drawGather(w, h) {
   const ox = (w - s * (X + 4)) / 2 + 2 * s, oy = top + SKY * s;
   const sx = (x) => ox + x * s, sy = (d) => oy + d * s;
 
-  // Trời hồng sớm + sông phù sa
-  const skyGrad = ctx.createLinearGradient(0, top, 0, oy);
-  skyGrad.addColorStop(0, "#ffd8c2"); skyGrad.addColorStop(1, "#bae6fd");
-  ctx.fillStyle = skyGrad; ctx.fillRect(0, top, w, SKY * s);
+  // Trời hồng sớm + sông phù sa (hỗ trợ chế độ tương phản cao)
+  if (highContrast) {
+    ctx.fillStyle = "#000000"; ctx.fillRect(0, top, w, h - top);
+    ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 3; ctx.strokeRect(sx(0), oy, X * s, D * s);
+  } else {
+    const skyGrad = ctx.createLinearGradient(0, top, 0, oy);
+    skyGrad.addColorStop(0, "#ffd8c2"); skyGrad.addColorStop(1, "#bae6fd");
+    ctx.fillStyle = skyGrad; ctx.fillRect(0, top, w, SKY * s);
 
-  const g = ctx.createLinearGradient(0, oy, 0, sy(D));
-  g.addColorStop(0, "#3b9ab2"); g.addColorStop(0.35, "#1f607a"); g.addColorStop(1, "#0b2438");
-  ctx.fillStyle = g; ctx.fillRect(sx(0), oy, X * s, D * s);
-  ctx.strokeStyle = "#e9f7ff"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx(0), oy); ctx.lineTo(sx(X), oy); ctx.stroke();
+    const g = ctx.createLinearGradient(0, oy, 0, sy(D));
+    g.addColorStop(0, "#3b9ab2"); g.addColorStop(0.35, "#1f607a"); g.addColorStop(1, "#0b2438");
+    ctx.fillStyle = g; ctx.fillRect(sx(0), oy, X * s, D * s);
+  }
+  ctx.strokeStyle = highContrast ? "#00ffff" : "#e9f7ff"; ctx.lineWidth = highContrast ? 3 : 2;
+  ctx.beginPath(); ctx.moveTo(sx(0), oy); ctx.lineTo(sx(X), oy); ctx.stroke();
 
   // Vạch vùng độ sâu (10m giữa, 20m sâu)
   for (let d = 10; d <= D; d += 10) {
@@ -537,13 +583,23 @@ function drawGather(w, h) {
     if (promptTxt) text(promptTxt, px, py - 1.4 * s, { size: 16, align: "center", color: "#fde047", bold: true });
   }
 
-  // Viền tím + cảnh báo Thủy quái!
-  if (monsterNear) {
-    ctx.strokeStyle = "#a855f7"; ctx.lineWidth = 8; ctx.strokeRect(4, 4, w - 8, h - 8);
-    text("⚠ THỦY QUÁI!", w / 2, top + 34, { size: 26, align: "center", color: "#d8b4fe", bold: true });
+  // Cảnh báo 1 & 2 (chữ + biểu tượng, tương phản cao): Thủy quái gần & Oxy sắp hết / Hết hơi
+  function drawAlertBanner(msg, yPos, bg, fg, border) {
+    const bw = 460, bh = 36, bx = (w - bw) / 2;
+    ctx.fillStyle = bg; ctx.fillRect(bx, yPos - 26, bw, bh);
+    ctx.strokeStyle = border; ctx.lineWidth = 3; ctx.strokeRect(bx, yPos - 26, bw, bh);
+    text(msg, w / 2, yPos, { size: 22, align: "center", color: fg, bold: true });
   }
+  if (monsterNear) {
+    ctx.strokeStyle = highContrast ? "#ffff00" : "#a855f7"; ctx.lineWidth = highContrast ? 10 : 8;
+    ctx.strokeRect(4, 4, w - 8, h - 8);
+    drawAlertBanner("⚠ 🐊 THỦY QUÁI GẦN!", top + 34, highContrast ? "#000" : "rgba(88,28,135,0.92)", highContrast ? "#ffff00" : "#f3e8ff", highContrast ? "#ffff00" : "#c084fc");
+  }
+  const oxyFrac = (p && p.oxygen_max_ticks) ? (p.oxygen_ticks / p.oxygen_max_ticks) : 1;
   if (p && p.oxygen_ticks === 0) {
-    text("⚠ HẾT HƠI!", w / 2, top + 68, { size: 26, align: "center", color: "#ef4444", bold: true });
+    drawAlertBanner("☠ 🫧 HẾT HƠI! NỔI LÊN NGAY!", top + 78, highContrast ? "#ff0000" : "rgba(153,27,27,0.95)", "#ffffff", "#ffff00");
+  } else if (p && oxyFrac < 0.25) {
+    drawAlertBanner("⚠ 🫧 OXY SẮP HẾT!", top + 78, highContrast ? "#000" : "rgba(180,83,9,0.92)", highContrast ? "#00ffff" : "#fef08a", highContrast ? "#00ffff" : "#facc15");
   }
 
   // HUD sáng (chữ >= 18px)
@@ -611,39 +667,61 @@ function drawQuan(w, h) {
   const ox = (w - s * X) / 2, oy = top;
   const sx = (x) => ox + x * s, sy = (z) => oy + (Z - z) * s;
 
-  // Sàn nhà bè gỗ + ánh đèn dây vàng
-  ctx.fillStyle = "#c99f65"; ctx.fillRect(sx(0), sy(Z), X * s, Z * s);
-  ctx.strokeStyle = "#6b4a2b"; ctx.lineWidth = 4; ctx.strokeRect(sx(0), sy(Z), X * s, Z * s);
+  // Sàn nhà bè gỗ + ánh đèn dây vàng (hỗ trợ chế độ tương phản cao)
+  ctx.fillStyle = highContrast ? "#000000" : "#c99f65";
+  ctx.fillRect(sx(0), sy(Z), X * s, Z * s);
+  ctx.strokeStyle = highContrast ? "#ffff00" : "#6b4a2b";
+  ctx.lineWidth = highContrast ? 5 : 4;
+  ctx.strokeRect(sx(0), sy(Z), X * s, Z * s);
 
   // 2 Bếp (B1, B2)
   (snap.stoves || []).forEach((st) => {
-    const col = st.state === "cooking" ? "#ea580c" : st.state === "ready" ? "#22c55e" : "#64748b";
+    const col = highContrast
+      ? (st.state === "cooking" ? "#ff8800" : st.state === "ready" ? "#00ff00" : "#444444")
+      : (st.state === "cooking" ? "#ea580c" : st.state === "ready" ? "#22c55e" : "#64748b");
     ctx.fillStyle = col; ctx.fillRect(sx(st.pos[0]) - 0.85 * s, sy(st.pos[1]) - 0.85 * s, 1.7 * s, 1.7 * s);
-    text(st.id, sx(st.pos[0]), sy(st.pos[1]) + 6, { size: 16, align: "center", color: "#fff", bold: true });
-    if (st.dish) text(dn(st.dish), sx(st.pos[0]), sy(st.pos[1]) - 1.0 * s, { size: 13, align: "center", color: "#1e1b18", bold: true });
-    if (st.state === "cooking") text(`Nấu ${Math.ceil(st.cook_ticks_left / 60)}s`, sx(st.pos[0]), sy(st.pos[1]) + 1.25 * s, { size: 14, align: "center", color: "#7c2d12", bold: true });
-    else if (st.state === "ready") text("CHÍN!", sx(st.pos[0]), sy(st.pos[1]) + 1.25 * s, { size: 14, align: "center", color: "#14532d", bold: true });
+    if (highContrast) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.strokeRect(sx(st.pos[0]) - 0.85 * s, sy(st.pos[1]) - 0.85 * s, 1.7 * s, 1.7 * s); }
+    text(st.id, sx(st.pos[0]), sy(st.pos[1]) + 6, { size: 16, align: "center", color: highContrast && st.state === "ready" ? "#000" : "#fff", bold: true });
+    if (st.dish) text(dn(st.dish), sx(st.pos[0]), sy(st.pos[1]) - 1.0 * s, { size: 13, align: "center", color: highContrast ? "#ffff00" : "#1e1b18", bold: true });
+    if (st.state === "cooking") text(`Nấu ${Math.ceil(st.cook_ticks_left / 60)}s`, sx(st.pos[0]), sy(st.pos[1]) + 1.25 * s, { size: 14, align: "center", color: highContrast ? "#ffbb00" : "#7c2d12", bold: true });
+    else if (st.state === "ready") text("✓ CHÍN!", sx(st.pos[0]), sy(st.pos[1]) + 1.25 * s, { size: 14, align: "center", color: highContrast ? "#00ff00" : "#14532d", bold: true });
   });
 
-  // 4 Bàn (T1..T4) + Khách
+  // 4 Bàn (T1..T4) + Khách + Cảnh báo 3 (Khách sắp giận: chữ + biểu tượng)
   const patMax = (meta.patience_s || 60) * 60;
   const byTable = {};
+  const angryTables = [];
   (snap.customers || []).forEach((c) => (byTable[c.table_id] = c));
   (snap.tables || []).forEach((tb) => {
-    ctx.fillStyle = "#8a5a2e"; ctx.beginPath(); ctx.arc(sx(tb.pos[0]), sy(tb.pos[1]), 0.9 * s, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = highContrast ? "#222222" : "#8a5a2e";
+    ctx.beginPath(); ctx.arc(sx(tb.pos[0]), sy(tb.pos[1]), 0.9 * s, 0, Math.PI * 2); ctx.fill();
+    if (highContrast) { ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 2; ctx.stroke(); }
     text(tb.id, sx(tb.pos[0]), sy(tb.pos[1]) + 6, { size: 16, align: "center", color: "#fff", bold: true });
     const c = byTable[tb.id];
     if (c) {
       const cx = sx(tb.pos[0]), cy = sy(tb.pos[1]) - 1.45 * s;
-      ctx.fillStyle = c.state === "eating" ? "#4ade80" : "#f9a8d4";
+      const frac = c.patience_ticks_left !== undefined ? (c.patience_ticks_left / patMax) : 1;
+      const isAngry = c.state === "waiting" && frac < 0.25;
+      if (isAngry) angryTables.push(tb.id);
+      ctx.fillStyle = c.state === "eating" ? "#4ade80" : (isAngry ? "#ef4444" : "#f9a8d4");
       ctx.beginPath(); ctx.arc(cx, cy, 0.55 * s, 0, Math.PI * 2); ctx.fill();
-      text(dn(c.dish_id), cx, cy - 0.75 * s, { size: 13, align: "center", color: "#1e1b18", bold: true });
+      if (highContrast) { ctx.strokeStyle = isAngry ? "#ffff00" : "#fff"; ctx.lineWidth = 2.5; ctx.stroke(); }
+      text(dn(c.dish_id), cx, cy - 0.75 * s, { size: 13, align: "center", color: highContrast ? "#ffffff" : "#1e1b18", bold: true });
+      if (isAngry) {
+        text("⚠ 😠 SẮP GIẬN!", cx, cy - 1.35 * s, { size: 15, align: "center", color: highContrast ? "#ffff00" : "#b91c1c", bold: true });
+      }
       if (c.state === "waiting" && c.patience_ticks_left !== undefined) {
-        const frac = c.patience_ticks_left / patMax;
-        bar(cx - 0.9 * s, cy + 0.65 * s, 1.8 * s, 8, frac, frac < 0.25 ? "#dc2626" : "#f59e0b");
+        bar(cx - 0.9 * s, cy + 0.65 * s, 1.8 * s, 8, frac, isAngry ? (highContrast ? "#ffff00" : "#dc2626") : "#f59e0b");
       }
     }
   });
+  if (angryTables.length) {
+    const bw = 480, bh = 36, bx = (w - bw) / 2, by = top + 12;
+    ctx.fillStyle = highContrast ? "#ff0000" : "rgba(185,28,28,0.92)";
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = "#ffff00"; ctx.lineWidth = 3; ctx.strokeRect(bx, by, bw, bh);
+    text(`⚠ 😠 KHÁCH BÀN ${angryTables.join(", ")} SẮP GIẬN!`, w / 2, by + 26, { size: 20, align: "center", color: "#ffffff", bold: true });
+  }
 
   // Người chơi + món trên tay
   const p = snap.player;
