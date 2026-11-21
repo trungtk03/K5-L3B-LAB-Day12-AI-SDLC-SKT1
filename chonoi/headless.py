@@ -1,4 +1,5 @@
-"""Điểm vào headless: python3 -m chonoi.headless --mode gather --seed 1 --ticks 600 --out out.jsonl
+"""Điểm vào headless (Test Contract v1.1):
+    python3 -m chonoi.headless --mode gather|quan|day --seed 1 --ticks 600 --out out.jsonl
 
 Mã thoát: 0 bình thường; 2 tham số/đầu vào sai (kiểm TRƯỚC khi ghi đầu ra); 1 lỗi chạy/ghi.
 """
@@ -33,10 +34,11 @@ def _int(name):
 
 def main(argv=None) -> int:
     p = _Parser(prog="chonoi.headless")
-    p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])  # `day` có từ v1.1
+    p.add_argument("--mode", required=True, choices=["gather", "quan", "day"])
     p.add_argument("--seed", required=True, type=_int("seed"))
     p.add_argument("--ticks", required=True, type=_int("ticks"))
     p.add_argument("--out", required=True)
+    p.add_argument("--days", type=_int("days"), default=None)
     p.add_argument("--scenario")
     p.add_argument("--inputs")
     p.add_argument("--inventory")
@@ -44,12 +46,15 @@ def main(argv=None) -> int:
     p.add_argument("--snapshot-every", dest="snapshot_every", type=_int("snapshot-every"), default=10)
     a = p.parse_args(argv)
     try:
-        if a.mode == "day":
-            raise BadInput("--mode day chưa hỗ trợ ở contract v1.0 (có từ v1.1)")
         if a.ticks < 0:
             raise BadInput("--ticks phải >= 0")
         if a.snapshot_every <= 0:
             raise BadInput("--snapshot-every phải > 0")
+        if a.days is not None and a.mode != "day":
+            raise BadInput("--days chỉ dùng với --mode day")
+        days = a.days if a.days is not None else 1
+        if a.mode == "day" and not (1 <= days <= 5):
+            raise BadInput("--days phải là số nguyên trong [1, 5]")
         if a.inventory and a.mode != "quan":
             raise BadInput("--inventory chỉ dùng với quan")
         if a.inventory_out and a.mode != "gather":
@@ -71,8 +76,8 @@ def main(argv=None) -> int:
         return 2
     try:
         run(a.mode, tuning, scenario, a.seed, frames, a.ticks, a.out, a.snapshot_every,
-            inventory=inventory, inventory_out=a.inventory_out)
-    except BadInput as e:  # lỗi mức luật phát hiện lúc dựng sim
+            inventory=inventory, inventory_out=a.inventory_out, days=days)
+    except BadInput as e:  # lỗi mức luật phát hiện lúc dựng sim / mở quán
         sys.stderr.write(f"đầu vào sai: {e}\n")
         return 2
     except OSError as e:

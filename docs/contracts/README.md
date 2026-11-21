@@ -1,55 +1,60 @@
-# Hợp đồng tích hợp Phase 1 — Nhóm SKT1 (Contract v1.0)
+# Hợp đồng tích hợp Phase 2 — Nhóm SKT1 (Contract v1.1)
 
-> Chốt bởi Integrator (`trungtk03`) và PO/QA (`DungNguyen74`). Mọi thay đổi hợp đồng phải báo cả nhóm và cập nhật tài liệu này.
+> Chốt bởi Integrator (`trungtk03`) và PO/QA (`DungNguyen74`). Nâng cấp từ v1.0 lên v1.1 theo TICKET-02.
 
 ## 1. Schema file kho (`inventory.json`, Contract G)
 
-File kho truyền dữ liệu giữa hai tiến trình `gather` (`--inventory-out`) và `quan` (`--inventory`):
-
-- Định dạng JSON UTF-8, duy nhất một khóa gốc `"items"`:
+- Định dạng JSON UTF-8, duy nhất khóa gốc `"items"`:
   ```json
   {"items":{"bong_sung":2,"ca_loc":1}}
   ```
-- Khóa trong `"items"` chỉ thuộc 4 nguyên liệu Phase 1: `bong_dien_dien`, `bong_sung`, `ca_linh`, `ca_loc`, sắp theo thứ tự chữ cái, bỏ mục bằng `0`, giá trị là số nguyên dương.
-- Ghi nguyên tử qua file tạm cùng thư mục, chỉ ghi **đúng một lần** khi `gather` kết thúc (`gather_end`). Nếu dừng do `tick_limit` thì không tạo/sửa file đích.
-- Đọc sai schema / id lạ / số âm / trùng với `scenario.quan.stock` → thoát mã `2` trước khi ghi đầu ra.
+- Khóa hợp lệ (6 nguyên liệu v1.1): `bong_dien_dien`, `bong_sung`, `keo_neo`, `ca_linh`, `ca_loc`, `ca_keo`, sắp theo khóa, bỏ mục 0, giá trị nguyên dương.
+- Ghi nguyên tử đúng 1 lần khi `gather_end` (ở `--mode gather --inventory-out`). Trong `--mode day`, kho được bàn giao tự động trong bộ nhớ giữa `gather` → `quan` (kể cả khi `fainted` → kho rỗng).
 - Ví dụ hợp lệ: [`inventory.sample.json`](inventory.sample.json).
 
-## 2. Giao diện giữa `sim/*` và `client/ui` (`chonoi/live.py` & `chonoi/web/index.html`)
+## 2. Chế độ CLI & Inputs v1.1
 
-- **Lệnh từ UI vào sim (`POST /input`):**
-  - `{"move": [dx, dy], "interact": bool, "catch": bool}` (trong đó `move` chuẩn hóa biên độ `<= 1`; `interact` và `catch` kích hoạt theo cạnh lên `false -> true`).
-  - `POST /restart`: khởi tạo lại `Session` với cùng `seed` và `scenario`.
-- **Trạng thái UI đọc từ sim (`GET /state`):**
-  - Trường chung: `tick`, `sim_tick`, `mode`, `phase`, `phase_tick`, `state`, `time_left_ticks`, `money`, `earned`, `reputation`, `score`, `meta`, `events`, `finished`, `reason`, `error`.
-  - Riêng `gather`: `player` (`pos`, `vel`, `heading_deg`, `oxygen_ticks`, `oxygen_max_ticks`, `hp`, `hp_max`, `zero_oxy_ticks`, `invuln_ticks`, `catch_cd_ticks`, `at_surface`), `hold`, `hold_count`, `hold_capacity`, `nodes`, `fish`.
-  - Riêng `quan`: `player` (`pos`), `stock`, `hand` (`null` hoặc `{order_id, dish_id, base_price}`), `stoves` (`id`, `pos`, `state`, `dish`, `order_id`, `cook_ticks_left`, `ready_ticks`), `tables` (`id`, `pos`, `customer_id`), `customers`.
+- Modes: `--mode gather | quan | day`. Cờ `--days N` (`1..5`, mặc định `1`) chỉ dùng với `--mode day`.
+- Nút boolean (cạnh lên `false -> true`, giữ qua đổi pha không tạo cạnh mới): `interact`, `catch`, `pause`, `shop_done`.
+- Trường một bước `buy` (chuỗi khác rỗng, không kế thừa): `"oxygen"`, `"hp"` trong pha `shop`.
+- `pause` áp dụng cho cả 3 mode: vào pause chỉ tăng `tick` ngoài, đóng băng `sim_tick`, `phase_tick` và mọi timer (kể cả Shop), phát `paused` và `state: "paused"`; cạnh `pause` tiếp theo phát `resumed` và chạy gameplay ngay trong bước đó.
 
-## 3. Danh sách sự kiện (JSONL `type: "event"`)
+## 3. Giao diện giữa `sim/*` và `client/ui` (`chonoi/live.py` & `chonoi/web/index.html`)
 
-### Buổi sáng (`gather`, phát bởi `chonoi/sim/gather.py`)
-| Tên sự kiện | `data` | Khi nào phát |
+- `POST /input`: `{"move": [dx, dy], "interact": bool, "catch": bool, "pause": bool, "shop_done": bool, "buy": str}`
+- `POST /restart`: khởi tạo lại `Session` từ đầu.
+- `GET /state`: snapshot JSON hiện tại + `meta` (toàn bộ `tuning`), `events`, `finished`, `reason`, `error`, `stats` (thống kê ca & tổng kết).
+- Snapshot `gather` bổ sung `monsters[]` (`id`, `kind`, `pos`, `state`, `state_ticks_left`, `target_idx`, `waypoints`, `recoil_dir`) và `fish[].age_ticks`.
+- Snapshot `day` bổ sung `day`, `day_plan`, `upgrades`, `active_upgrades`, `phase` (`gather`/`quan`/`shop`), và trong pha `shop` có `stock` dư + `time_left_ticks`.
+
+## 4. Danh sách sự kiện v1.1
+
+### Chung & Pause
+| Tên sự kiện | `data` | Ghi chú |
 |---|---|---|
-| `dive` | `{"pos": [x, d]}` | Chuyển từ mặt nước (`d <= surface_depth`) xuống dưới nước |
-| `surface` | `{"pos": [x, d]}` | Chuyển từ dưới nước lên mặt nước |
-| `oxygen_empty` | `{"oxygen_ticks": 0}` | Oxy giảm từ `> 0` về `0` khi ở dưới nước |
-| `choke` | `{"hp": int}` | Đủ `choke_interval_ticks` (60) với `oxygen_ticks == 0` dưới nước, trừ 1 Máu |
-| `faint` | `{"cause": "choke", "lost": [...], "hp": 0}` | Máu về 0; `lost` theo thứ tự LIFO |
-| `gather` | `{"node_id", "kind", "amount"}` | Hái thành công nút ở mặt nước |
-| `node_regrown` | `{"node_id"}` | `regrow_ticks` giảm về `0` |
-| `fish_caught` | `{"fish_id", "kind", "yield"}` | Bắt thành công đàn cá dưới nước |
-| `hold_full` | `{"action": "gather"\|"catch", "node_id"\|"fish_id", "required", "free"}` | Giỏ không đủ chỗ trống |
+| `paused` / `resumed` | `{}` | Chuyển trạng thái tạm dừng / tiếp tục |
+
+### Buổi sáng (`gather`)
+| Tên sự kiện | `data` | Ghi chú |
+|---|---|---|
+| `dive` / `surface` | `{"pos": [x, d]}` | Lặn xuống / nổi lên qua `surface_depth` |
+| `oxygen_empty` | `{"oxygen_ticks": 0}` | Oxy vừa chạm 0 dưới nước |
+| `choke` | `{"hp": int}` | Ngạt mỗi 60 tick (tính cả bước chạm 0), xuyên bất tử |
+| `monster_hit` | `{"monster_id", "hp", "lost": [...], "pos": [x, d]}` | Cá Sấu chạm (`≤ 1.5 m`, `d ≥ 10`, hết bất tử), mất `floor(n/2)` LIFO |
+| `faint` | `{"cause": "choke"\|"monster", "lost": [...], "hp": 0}` | Máu chạm 0, mất phần giỏ còn lại theo LIFO |
+| `gather` / `node_regrown` | `{"node_id", "kind", "amount"}` / `{"node_id"}` | Hái nút mặt nước & mọc lại sau 20s |
+| `fish_caught` / `fish_spawned` | `{"fish_id", "kind", "yield"}` / `{"id", "kind", "pos"}` | Bắt đàn cá (vị trí trước khi bơi) & sinh đàn mới tại `360·k` |
+| `hold_full` | `{"action", "node_id"\|"fish_id", "required", "free"}` | Giỏ không đủ chỗ |
 | `gather_end` | `{"reason": "docked"\|"time"\|"fainted", "inventory": {"items": {...}}}` | Kết thúc buổi sáng |
 
-### Buổi tối (`quan`, phát bởi `chonoi/sim/quan.py`)
-| Tên sự kiện | `data` | Khi nào phát |
+### Buổi tối (`quan`)
+`customer_arrived`, `no_dish`, `cook_started`, `dish_ready`, `dish_picked`, `served`, `paid` (`finished_eating`/`closing`), `customer_left` (`patience`/`closing`), `quan_end`.
+
+### Vòng ngày (`day`) & Shop (`shop`)
+| Tên sự kiện | `data` | Ghi chú |
 |---|---|---|
-| `customer_arrived` | `{"order_id", "table_id", "dish_id"}` | Khách mới vào bàn trống theo lịch, giữ chỗ nguyên liệu |
-| `no_dish` | `{}` | Tới lịch khách mới, có bàn trống nhưng kho khả dụng không đủ nấu món nào |
-| `cook_started` | `{"stove_id", "order_id", "dish_id", "items": {...}, "base_price"}` | Tương tác bếp rảnh, trừ kho theo công thức và bắt đầu nấu đơn giữ chỗ cũ nhất |
-| `dish_ready` | `{"stove_id", "order_id", "dish_id"}` | `cook_ticks_left` giảm về `0`, bếp chuyển `ready` (`ready_ticks = 0`) |
-| `dish_picked` | `{"stove_id", "order_id", "dish_id"}` | Nhấc món từ bếp `ready` lên tay rỗng, bếp về `idle` |
-| `served` | `{"order_id", "table_id", "dish_id", "patience_ticks_left", "base_price", "tip"}` | Phục vụ món khớp `order_id` tại bàn, khách chuyển `eating` |
-| `paid` | `{"order_id", "table_id", "base_price", "tip", "amount", "reason": "finished_eating"\|"closing"}` | Khách ăn xong hoặc hết giờ ca, thanh toán tiền và cộng uy tín nếu `tip > 0` |
-| `customer_left` | `{"order_id", "table_id", "reason": "patience"\|"closing", "reputation"}` | Khách chờ hết kiên nhẫn (trừ uy tín) hoặc hết giờ ca (không trừ uy tín) |
-| `quan_end` | `{"reason": "time", "money", "earned", "shift_earned", "reputation"}` | Hết giờ ca buổi tối |
+| `day_start` / `phase_start` | `{}` | Mở Ngày mới / mở pha mới (`phase_tick: 0`) |
+| `day_plan` | `{"dishes": {...}, "ingredients": {...}}` | Kế hoạch món & tổng nguyên liệu Ngày |
+| `bought` | `{"upgrade", "level", "price", "money"}` | Mua nâng cấp thành công (trừ `money`, giữ `earned`) |
+| `buy_failed` | `{"action", "reason": "funds"\|"max_level"\|"unknown"}` | Mua thất bại |
+| `shop_end` | `{"reason": "done"\|"time"}` | Đóng Shop, tăng `days_completed` |
