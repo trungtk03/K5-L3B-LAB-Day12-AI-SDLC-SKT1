@@ -1,8 +1,8 @@
 # trungtk03 — phản tư cá nhân (≤ 200 từ)
 
 - **Tôi đã làm:**
-  - Hoàn thiện Lát 3 & Lát 4 cho buổi tối (`chonoi/sim/quan.py`) gồm lịch khách, giữ chỗ nguyên liệu, kiên nhẫn, nấu/bưng/phục vụ, tính boa, uy tín và đóng ca `quan_end`, cùng kiểm mâu thuẫn scenario mức luật (`chonoi/scenario.py`).
-  - Viết bộ kiểm thử Lát 3/4 và E2E 2 tiến trình (`tests/test_quan_lat3_lat4.py`), hoàn thiện hợp đồng tích hợp (`docs/contracts/README.md`), `README.md`, `AGENTS.md`, 2 skill nhóm trong `.agents/skills/`, xuất bằng chứng thực tế (`docs/proof/phase-1/`), hoàn thiện `docs/verification/phase-1.md` và gắn tag `phase-1`.
-- **Tôi đã review:** Rà soát cài đặt Lát 1 & Lát 2 của `DungNguyen74` (`chonoi/sim/gather.py`, `tests/test_gather_lat1.py`, `tests/test_gather_lat2.py`) ở commit `eecd317` và `3a5de50` — chạy lại toàn bộ 10 ca test gather đều xanh.
-- **AI sai ở đâu và tôi phát hiện thế nào:** Khi chạy test E2E đầu tiên, bước di chuyển từ bếp `B1` về bàn `T1` bị dừng cách bàn `1.503m` (lệch 3mm ngoài `interact_radius = 1.5m`) nên không phát `served`; ngoài ra phát hiện rủi ro sai số float khi cộng dồn `0.2` uy tín ảnh hưởng `floor(reputation)`. Đã sửa và xác minh bằng test tự động.
-- **Điều tôi học được:** Chia 4 lát rõ ràng và khóa hợp đồng sớm giúp 2 người làm song song rồi ghép 2 tiến trình qua `inventory.json` rất mượt.
+  - Phase 1: Hoàn thiện Lát 3 & Lát 4 (`chonoi/sim/quan.py`), kiểm mâu thuẫn scenario (`chonoi/scenario.py`), 12 ca test + E2E 2 tiến trình, tài liệu DoD, skills `.agents/skills/`, proof Phase 1 và tag `phase-1`.
+  - Phase 2: Nâng cấp toàn bộ hệ thống lên Test Contract v1.1 (`game.contract.json`, `contract/inventory/inputs/scenario/headless`), mở rộng `quan.py` (2 bếp/4 bàn/6 món + lọc `day_plan`), triển khai `shop.py`, `day.py`, `pause` cả 3 mode trong `runner.py`, Menu/Chuyển pha/Shop/Pause/HUD v1.1 (`live.py`, `web/index.html`), phối hợp hoàn thiện `gather.py` v1.1, xuất bộ proof 70/70 test xanh và chốt tag `phase-2`.
+- **Tôi đã review:** Đối chiếu toàn bộ số chuẩn TICKET-02, rà regression P1 và cập nhật có giải trình 3 assertion thay đổi theo v1.1.
+- **AI sai ở đâu và tôi phát hiện thế nào:** Phase 1 từng lệch 3mm ngoài bán kính bàn `T1` trong test E2E và phát hiện rủi ro sai số float khi cộng uy tín `0.2`; Phase 2 rà soát kỹ thứ tự `buy` trước `shop_done` ở bước cuối và sao `upgrades → active_upgrades` chỉ khi sang Ngày mới.
+- **Điều tôi học được:** Khóa manifest và thứ tự xử lý mỗi tick ngay từ đầu phase giúp ghép nhiều pha `gather → quan → shop` qua nhiều Ngày cực kỳ ổn định.

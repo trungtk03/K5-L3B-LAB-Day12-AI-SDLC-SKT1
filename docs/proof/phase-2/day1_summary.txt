@@ -1,0 +1,16 @@
+=== Phase 2 Day-1 Full Smoke (--mode day --days 1 --ticks 22200) ===
+Runtime: 0.934 s (requirement <= 20.0 s)
+End row: {"type": "end", "ticks": 22200, "sim_tick": 22200, "mode": "day", "state": "finished", "reason": "days_complete", "money": 0, "earned": 0, "reputation": 3.0, "score": 300, "days_completed": 1}
+Key lifecycle events:
+  t0 D1 [gather]: day_start {}
+  t0 D1 [gather]: day_plan {"dishes": {"ca_loc_nuong_trui": 3, "goi_bong_sung": 3}, "ingredients": {"bong_sung": 6, "ca_loc": 3}}
+  t0 D1 [gather]: phase_start {}
+  t360 D1 [gather]: fish_spawned {"id": "F9", "kind": "ca_keo", "pos": [90.0, 27.0]}
+  t720 D1 [gather]: fish_spawned {"id": "F10", "kind": "ca_linh", "pos": [75.0, 10.0]}
+  t1080 D1 [gather]: fish_spawned {"id": "F11", "kind": "ca_keo", "pos": [15.0, 27.0]}
+  t1440 D1 [gather]: fish_spawned {"id": "F12", "kind": "ca_loc", "pos": [15.0, 16.0]}
+  t10800 D1 [gather]: gather_end {"reason": "time", "inventory": {"items": {}}}
+  t10800 D1 [quan]: phase_start {}
+  t21600 D1 [quan]: quan_end {"reason": "time", "money": 0, "earned": 0, "shift_earned": 0, "reputation": 3.0}
+  t21600 D1 [shop]: phase_start {}
+  t22200 D1 [shop]: shop_end {"reason": "time"}

@@ -1,0 +1,17 @@
+=== Phase 2 Byte-for-Byte Determinism (SHA-256) & Performance ===
+
+gather (--seed 42 --ticks 600):
+  run 1 SHA-256: 9f89c33ce306d633afc686e28cd675e9b7690497945fec485bce2344e1bb3740 (0.216s)
+  run 2 SHA-256: 9f89c33ce306d633afc686e28cd675e9b7690497945fec485bce2344e1bb3740 (0.248s)
+  match: EXACT (100% byte-identical)
+
+quan (--seed 42 --ticks 600):
+  run 1 SHA-256: 471ee07c8cc3a12029f637d93c1a19879c8437875f9d4f822080ea6dbf1631b4 (0.222s)
+  run 2 SHA-256: 471ee07c8cc3a12029f637d93c1a19879c8437875f9d4f822080ea6dbf1631b4 (0.207s)
+  match: EXACT (100% byte-identical)
+
+day (--days 1 --seed 11 --ticks 22200):
+  run 1 SHA-256: 639c367e037d75f1a07884d6759e14294ede38065ec6c90d59a1b4ea87e692e8 (1.066s)
+  run 2 SHA-256: 639c367e037d75f1a07884d6759e14294ede38065ec6c90d59a1b4ea87e692e8 (0.988s)
+  match: EXACT (100% byte-identical)
+

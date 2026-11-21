@@ -1,0 +1,5 @@
+=== Phase 2 Multi-Day Upgrade & Monster Proof (--mode day --days 3) ===
+Day 1 gather (t0): oxy_max=1800, hp_max=3, monsters=['M1']
+Day 2 gather (t4): active_upgrades={'hp': 1, 'oxygen': 1}, oxy_max=2700, hp_max=4, monsters=['M1']
+Day 3 gather (t7): active_upgrades={'hp': 1, 'oxygen': 1}, monsters=['M1', 'M2']
+End row: {"type": "end", "ticks": 10, "sim_tick": 10, "mode": "day", "state": "finished", "reason": "days_complete", "money": 50, "earned": 500, "reputation": 3.0, "score": 800, "days_completed": 3}

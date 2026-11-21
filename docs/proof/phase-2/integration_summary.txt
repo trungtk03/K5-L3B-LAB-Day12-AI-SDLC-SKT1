@@ -1,0 +1,17 @@
+=== Phase 2 Integration Smoke (gather --inventory-out -> quan --inventory, v1.1) ===
+Inventory file (integration_inventory.json): {"items":{"ca_keo":2,"keo_neo":1}}
+Quan tick-0 stock: {"ca_keo": 2, "keo_neo": 1}
+Quan stoves/tables count: 2 stoves, 4 tables
+Gather events:
+  t1: fish_caught {"fish_id": "F1", "kind": "ca_keo", "yield": 2}
+  t358: surface {"pos": [2.115, 0.442]}
+  t371: gather_end {"reason": "docked", "inventory": {"items": {"ca_keo": 2, "keo_neo": 1}}}
+Quan events:
+  t120: customer_arrived {"order_id": "C1", "table_id": "T1", "dish_id": "ca_keo_nuong"}
+  t122: cook_started {"stove_id": "B1", "order_id": "C1", "dish_id": "ca_keo_nuong", "items": {"ca_keo": 2}, "base_price": 70}
+  t482: dish_ready {"stove_id": "B1", "order_id": "C1", "dish_id": "ca_keo_nuong"}
+  t486: dish_picked {"stove_id": "B1", "order_id": "C1", "dish_id": "ca_keo_nuong"}
+  t626: served {"order_id": "C1", "table_id": "T1", "dish_id": "ca_keo_nuong", "patience_ticks_left": 3094, "base_price": 70, "tip": 14}
+  t1020: no_dish {}
+  t1226: paid {"order_id": "C1", "table_id": "T1", "base_price": 70, "tip": 14, "amount": 84, "reason": "finished_eating"}
+Quan end: {"type": "end", "ticks": 1250, "sim_tick": 1250, "mode": "quan", "state": "playing", "reason": "tick_limit", "money": 84, "earned": 84, "reputation": 3.2, "score": 384}
