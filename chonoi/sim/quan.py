@@ -1,10 +1,7 @@
-"""Buổi tối — Mở Quán (`quan`).
+"""Buổi tối — Mở Quán (`quan`, Contract v1.1).
 
-Hoàn thiện Lát 3 & Lát 4 theo PRD-0 mục F ("Quán") và Test Contract v1.0:
-  - Lát 3: Khách đến theo lịch, kiểm tra nguyên liệu khả dụng, giữ chỗ (reserved),
-           kiên nhẫn, rời quán (customer_left), no_dish, vòng đời khách.
-  - Lát 4: Tương tác bếp/bàn (cook_started, dish_ready, dish_picked, served),
-           khách ăn xong trả tiền (paid), boa (tip), uy tín, đóng ca (quan_end).
+Hỗ trợ 2 bếp (B1–B2), 4 bàn (T1–T4), 6 món ăn, lọc theo kế hoạch Ngày (`allowed_dishes`)
+khi chạy trong `--mode day`, và kế thừa `money`/`earned`/`reputation` xuyên Ngày.
 """
 
 import math
@@ -20,10 +17,12 @@ class QuanSim:
     mode = "quan"
     phase = "quan"
 
-    def __init__(self, tuning, scenario, streams, ids, inventory=None):
+    def __init__(self, tuning, scenario, streams, ids, inventory=None,
+                 allowed_dishes=None, money=0, earned=0, reputation=None):
         t = tuning["quan"]
         self.t = t
         self.menu = tuning["menu"]
+        self.allowed_dishes = set(allowed_dishes) if allowed_dishes is not None else set(self.menu.keys())
         self.rng = streams
         self.ids = ids
 
@@ -33,13 +32,15 @@ class QuanSim:
         self._tgt = None
         self._ramp_left = 0
 
-        # Kho: nạp từ file --inventory HOẶC scenario.stock
+        # Kho: nạp từ --inventory (hoặc từ gather trong day) HOẶC scenario.stock
         raw_stock = inventory if inventory is not None else scenario.get("stock", {})
         self.stock = {k: v for k, v in raw_stock.items() if v > 0}
 
         raw_hand = scenario.get("hand")
         if raw_hand is not None:
             self.hand = dict(raw_hand)
+            if self.hand["dish_id"] not in self.allowed_dishes:
+                raise BadInput(f"quan.hand.dish_id ({self.hand['dish_id']}) không thuộc kế hoạch Ngày")
             if "base_price" not in self.hand or self.hand["base_price"] is None:
                 self.hand["base_price"] = int(self.menu[self.hand["dish_id"]]["price"])
             ids.reserve(self.hand["order_id"])
@@ -49,7 +50,7 @@ class QuanSim:
         self.time_left_ticks = scenario.get("time_left_ticks", int(round(t["duration_s"] * TICK)))
         self.phase_tick = scenario.get("phase_tick", 0)
         self.random_customers = scenario.get("random_customers", True)
-        self.reputation = float(scenario.get("reputation", t["reputation_initial"]))
+        self.reputation = float(reputation if reputation is not None else scenario.get("reputation", t["reputation_initial"]))
 
         self.stoves = []
         for s in self._merge(t["stoves"], scenario.get("stoves", [])):
@@ -61,6 +62,8 @@ class QuanSim:
             st.setdefault("cook_ticks_left", 0)
             st.setdefault("ready_ticks", 0)
             if st["state"] in ("cooking", "ready"):
+                if st["dish"] not in self.allowed_dishes:
+                    raise BadInput(f"stoves.{st['id']}.dish ({st['dish']}) không thuộc kế hoạch Ngày")
                 if st.get("base_price") is None and st["dish"] in self.menu:
                     st["base_price"] = int(self.menu[st["dish"]]["price"])
                 if st.get("order_id"):
@@ -75,7 +78,7 @@ class QuanSim:
             tcopy["pos"] = [float(c) for c in tcopy["pos"]]
             self.tables.append(tcopy)
 
-        # Đếm số món đang gắn với mỗi order_id (trên bếp đang nấu/chín hoặc trên tay)
+        # Đếm số món đang gắn với mỗi order_id (trên bếp hoặc trên tay)
         assigned_counts = {}
         for s in self.stoves:
             if s["state"] in ("cooking", "ready") and s.get("order_id"):
@@ -94,6 +97,8 @@ class QuanSim:
             cid = c["id"]
             ids.reserve(cid)
             dish_id = c["dish_id"]
+            if dish_id not in self.allowed_dishes:
+                raise BadInput(f"customers.{cid}: dish_id ({dish_id}) không thuộc kế hoạch Ngày")
             state = c.get("state", "waiting")
             c["state"] = state
             c.setdefault("order_tick", 0)
@@ -141,8 +146,8 @@ class QuanSim:
             if qty > self.stock.get(k, 0):
                 raise BadInput(f"khách giữ chỗ nguyên liệu {k} ({qty}) vượt kho hiện có ({self.stock.get(k, 0)})")
 
-        self.money = 0
-        self.earned = 0
+        self.money = int(money)
+        self.earned = int(earned)
         self.shift_earned = 0
         self.done = False
         self.reason = None
@@ -237,7 +242,16 @@ class QuanSim:
                         "reason": "closing",
                         "reputation": self.reputation,
                     }))
+            # Dọn khách, tay cầm và bếp khi đóng ca
             self.customers = []
+            self.hand = None
+            for s in self.stoves:
+                s["state"] = "idle"
+                s["dish"] = None
+                s["order_id"] = None
+                s["base_price"] = None
+                s["cook_ticks_left"] = 0
+                s["ready_ticks"] = 0
             self.done = True
             self.reason = "time"
             events.append(("quan_end", {
@@ -406,14 +420,13 @@ class QuanSim:
             return
         tb = free_tables[0]
 
-        # Tính nguyên liệu khả dụng = tồn kho - tổng đang được khách giữ chỗ
         avail = dict(self.stock)
         for c in self.customers:
             for k, qty in c.get("reserved", {}).items():
                 avail[k] = avail.get(k, 0) - qty
 
         dishes_eligible = []
-        for dish_id in sorted(self.menu):
+        for dish_id in sorted(self.allowed_dishes):
             recipe = self.menu[dish_id]["recipe"]
             if all(avail.get(k, 0) >= qty for k, qty in recipe.items()):
                 dishes_eligible.append(dish_id)
