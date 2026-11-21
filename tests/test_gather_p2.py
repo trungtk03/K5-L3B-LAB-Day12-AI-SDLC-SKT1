@@ -10,7 +10,7 @@ import math
 import os
 import unittest
 
-from helpers import Workdir, close, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, close, events, frames, items_v12, read_jsonl, run_headless, snapshots, write_json
 
 
 class TestGatherP2(unittest.TestCase):
@@ -66,7 +66,7 @@ class TestGatherP2(unittest.TestCase):
             fc = events(rows2, "fish_caught")
             self.assertEqual(len(fc), 1)
             self.assertEqual(fc[0]["data"], {"fish_id": "F1", "kind": "ca_keo", "yield": 2})
-            self.assertEqual(snapshots(rows2)[-1]["hold"], ["ca_keo", "ca_keo"])
+            self.assertEqual([it["kind"] for it in snapshots(rows2)[-1]["hold"]], ["ca_keo", "ca_keo"])
 
     def test_p2_gather_03_fish_swim_reflection_and_turn_at_120(self):
         """Đàn cá bơi 1.5 m/s, phản xạ mép x/d đúng phần dư, chạm góc đảo cả 2 thành phần, đổi hướng ở bước 120."""
@@ -114,7 +114,7 @@ class TestGatherP2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [20, 5], "oxygen_ticks": 1, "hp": 3, "invuln_ticks": 80},
-                    "hold": ["ca_loc", "bong_sung"],
+                    "hold": items_v12("ca_loc", "bong_sung"),
                     "random_fish": False,
                     "monsters": [],
                 }
@@ -129,7 +129,7 @@ class TestGatherP2(unittest.TestCase):
             self.assertEqual(chokes[0]["tick"], 60)
             self.assertEqual(chokes[0]["data"]["hp"], 2)
             # Ngạt không làm rơi hàng trong giỏ
-            self.assertEqual(snapshots(rows)[-1]["hold"], ["ca_loc", "bong_sung"])
+            self.assertEqual([it["kind"] for it in snapshots(rows)[-1]["hold"]], ["ca_loc", "bong_sung"])
 
     def test_p2_gather_06_monster_patrol_chase_hit_recoil_invuln(self):
         """Cá Sấu patrol -> chase khi d>=10 & dist<=10m -> hit mất 1 HP, rơi floor(n/2) LIFO, invuln 90, recoil 60."""
@@ -138,7 +138,7 @@ class TestGatherP2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [60, 24], "hp": 3},
-                    "hold": ["ca_loc", "bong_sung", "ca_linh", "keo_neo", "ca_keo"],  # 5 món -> rơi floor(5/2)=2 LIFO
+                    "hold": items_v12("ca_loc", "bong_sung", "ca_linh", "keo_neo", "ca_keo"),  # 5 món -> rơi floor(5/2)=2 LIFO
                     "random_fish": False,
                 }
             })
@@ -152,9 +152,10 @@ class TestGatherP2(unittest.TestCase):
             self.assertEqual(hits[0]["tick"], 1)
             self.assertEqual(hits[0]["data"]["monster_id"], "M1")
             self.assertEqual(hits[0]["data"]["hp"], 2)
-            # LIFO: 2 món nhặt sau cùng là ca_keo, keo_neo
-            self.assertEqual(hits[0]["data"]["lost"], ["ca_keo", "keo_neo"])
-            self.assertEqual(snaps[1]["hold"], ["ca_loc", "bong_sung", "ca_linh"])
+            # LIFO (v1.2): 2 cá thể nhặt sau cùng là I5 ca_keo, I4 keo_neo
+            self.assertEqual([it["id"] for it in hits[0]["data"]["lost"]], ["I5", "I4"])
+            self.assertEqual([it["kind"] for it in hits[0]["data"]["lost"]], ["ca_keo", "keo_neo"])
+            self.assertEqual([it["kind"] for it in snaps[1]["hold"]], ["ca_loc", "bong_sung", "ca_linh"])
             self.assertEqual(snaps[1]["player"]["invuln_ticks"], 90)
             m1_t1 = snaps[1]["monsters"][0]
             self.assertEqual(m1_t1["state"], "recoil")
@@ -174,7 +175,7 @@ class TestGatherP2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [60, 24], "hp": 1},
-                    "hold": ["ca_loc", "bong_sung", "ca_keo"],  # 3 món: hit rơi 1 (ca_keo), faint rơi 2 còn lại (bong_sung, ca_loc)
+                    "hold": items_v12("ca_loc", "bong_sung", "ca_keo"),  # 3 món: hit rơi 1 (I3), faint rơi 2 còn lại (I2, I1)
                     "random_fish": False,
                 }
             })
@@ -186,12 +187,14 @@ class TestGatherP2(unittest.TestCase):
             fn = events(rows, "faint")
             ge = events(rows, "gather_end")
             self.assertEqual(len(mh), 1)
-            self.assertEqual(mh[0]["data"]["lost"], ["ca_keo"])
+            self.assertEqual([it["kind"] for it in mh[0]["data"]["lost"]], ["ca_keo"])
             self.assertEqual(len(fn), 1)
-            self.assertEqual(fn[0]["data"], {"cause": "monster", "lost": ["bong_sung", "ca_loc"], "hp": 0})
-            self.assertEqual(ge[0]["data"], {"reason": "fainted", "inventory": {"items": {}}})
+            self.assertEqual(fn[0]["data"]["cause"], "monster")
+            self.assertEqual([it["kind"] for it in fn[0]["data"]["lost"]], ["bong_sung", "ca_loc"])
+            self.assertEqual(fn[0]["data"]["hp"], 0)
+            self.assertEqual(ge[0]["data"], {"reason": "fainted", "inventory": {"items": []}})
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
     def test_p2_gather_08_monster_exits_chase_above_10m_depth(self):
         """Người chơi nổi lên d < 10 -> Cá Sấu rời chase trở về patrol."""

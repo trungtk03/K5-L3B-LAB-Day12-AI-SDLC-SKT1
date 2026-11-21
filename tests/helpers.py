@@ -21,6 +21,11 @@ def frames(*fr):
     return {"frames": list(fr)}
 
 
+def items_v12(*kinds, fresh=100, start=1):
+    """Tiện ích dựng mảng cá thể Contract v1.2: [{'id': 'I1', 'kind': ..., 'fresh': ...}]."""
+    return [{"id": f"I{start + i}", "kind": k, "fresh": fresh} for i, k in enumerate(kinds)]
+
+
 def headless_cmd():
     """Lệnh headless khai trong game.contract.json — test chạy qua đây nên dùng được với MỌI ngôn ngữ."""
     with open(os.path.join(ROOT, "game.contract.json"), encoding="utf-8") as f:

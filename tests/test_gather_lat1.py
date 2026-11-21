@@ -4,7 +4,7 @@ import json
 import os
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, items_v12, read_jsonl, run_headless, snapshots, write_json
 
 
 class TestGatherLat1(unittest.TestCase):
@@ -83,7 +83,7 @@ class TestGatherLat1(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [20, 5], "oxygen_ticks": 0, "hp": 1, "zero_oxy_ticks": 59},
-                    "hold": ["ca_loc", "bong_dien_dien", "ca_linh"]
+                    "hold": items_v12("ca_loc", "bong_dien_dien", "ca_linh"),
                 }
             })
             # Bước tiếp theo (tick 1) zero_oxy_ticks đạt 60 -> choke -> hp = 0 -> faint!
@@ -95,19 +95,20 @@ class TestGatherLat1(unittest.TestCase):
             self.assertEqual(len(faint_evs), 1)
             self.assertEqual(faint_evs[0]["tick"], 1)
             self.assertEqual(faint_evs[0]["data"]["cause"], "choke")
-            # Thứ tự lost: LIFO (nhặt sau bỏ trước): ca_linh, bong_dien_dien, ca_loc
-            self.assertEqual(faint_evs[0]["data"]["lost"], ["ca_linh", "bong_dien_dien", "ca_loc"])
+            # Thứ tự lost (v1.2): mảng cá thể LIFO (I3 ca_linh, I2 bong_dien_dien, I1 ca_loc)
+            self.assertEqual([it["kind"] for it in faint_evs[0]["data"]["lost"]], ["ca_linh", "bong_dien_dien", "ca_loc"])
+            self.assertEqual([it["id"] for it in faint_evs[0]["data"]["lost"]], ["I3", "I2", "I1"])
             self.assertEqual(faint_evs[0]["data"]["hp"], 0)
 
-            # gather_end reason fainted với kho rỗng
+            # gather_end reason fainted với kho rỗng []
             gather_end = events(rows, "gather_end")
             self.assertEqual(len(gather_end), 1)
             self.assertEqual(gather_end[0]["data"]["reason"], "fainted")
-            self.assertEqual(gather_end[0]["data"]["inventory"], {"items": {}})
+            self.assertEqual(gather_end[0]["data"]["inventory"], {"items": []})
 
-            # File kho được ghi ra rỗng
+            # File kho được ghi ra rỗng {"items": []}
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {}})
+                self.assertEqual(json.load(f), {"items": []})
 
 
 if __name__ == "__main__":

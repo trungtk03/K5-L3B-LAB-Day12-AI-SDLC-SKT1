@@ -5,7 +5,7 @@ import os
 import time
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, items_v12, read_jsonl, run_headless, snapshots, write_json
 
 
 class TestDayShopPauseP2(unittest.TestCase):
@@ -39,7 +39,7 @@ class TestDayShopPauseP2(unittest.TestCase):
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "day": {"money": 300, "earned": 300},
-                "gather": {"hold": ["ca_loc"], "random_fish": False, "monsters": []},
+                "gather": {"hold": items_v12("ca_loc"), "random_fish": False, "monsters": []},
                 "quan": {"time_left_ticks": 2, "random_customers": False},
             })
             # Tick 0: interact cập bến -> chuyển sang quan (tick 1)
@@ -92,7 +92,7 @@ class TestDayShopPauseP2(unittest.TestCase):
             # Mang về ca_keo ×2 (đủ nấu ca_keo_nuong nhưng KHÔNG thuộc kế hoạch D1) -> quán phải phát no_dish!
             sc = write_json(w.path("sc.json"), {
                 "day": {"money": 650, "earned": 650},
-                "gather": {"hold": ["ca_keo", "ca_keo"], "random_fish": False, "monsters": []},
+                "gather": {"hold": items_v12("ca_keo", "ca_keo"), "random_fish": False, "monsters": []},
                 "quan": {"time_left_ticks": 130},
             })
             inp = write_json(w.path("in.json"), frames(
@@ -182,7 +182,7 @@ class TestDayShopPauseP2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [60, 24], "hp": 1},
-                    "hold": ["ca_loc"],
+                    "hold": items_v12("ca_loc"),
                     "random_fish": False,
                 },
                 "quan": {"time_left_ticks": 1, "random_customers": False},
@@ -193,7 +193,7 @@ class TestDayShopPauseP2(unittest.TestCase):
             rows = read_jsonl(w.path("d.jsonl"))
             ge = events(rows, "gather_end")[0]
             self.assertEqual(ge["data"]["reason"], "fainted")
-            self.assertEqual(ge["data"]["inventory"], {"items": {}})
+            self.assertEqual(ge["data"]["inventory"], {"items": []})
             # Quan mở ngay cùng tick 1 với stock rỗng
             ps_q = [e for e in events(rows, "phase_start") if e["phase"] == "quan"]
             self.assertEqual(len(ps_q), 1)
@@ -214,7 +214,7 @@ class TestDayShopPauseP2(unittest.TestCase):
             self.assertFalse(os.path.exists(out))
 
             bad_scenarios = [
-                {"quan": {"stock": {"ca_loc": 1}}},          # cấm quan.stock trong day
+                {"quan": {"stock": items_v12("ca_loc")}},    # cấm quan.stock trong day
                 {"quan": {"reputation": 4.0}},               # cấm quan.reputation trong day
                 {"day": {"money": 100}},                     # thiếu earned khi money > 0
                 {"day": {"money": 200, "earned": 100}},      # money > earned

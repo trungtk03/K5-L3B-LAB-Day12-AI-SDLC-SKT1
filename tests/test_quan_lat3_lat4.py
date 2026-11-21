@@ -1,4 +1,4 @@
-"""Bộ kiểm thử cho Lát 3 & Lát 4 (Quán) và liên thông E2E 2 tiến trình.
+"""Bộ kiểm thử cho Lát 3 & Lát 4 (Quán) và liên thông E2E 2 tiến trình (cập nhật schema cá thể Contract v1.2).
 
 Chạy:
     PYTHONPATH=tests:. python3 -m unittest tests/test_quan_lat3_lat4.py -v
@@ -13,12 +13,12 @@ from chonoi.ids import IdAllocator
 from chonoi.inputs import InputState
 from chonoi.rng import Streams
 from chonoi.sim.quan import QuanSim
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, close, events, frames, items_v12, read_jsonl, run_headless, snapshots, write_json
 
 
 class TestQuanLat3Lat4(unittest.TestCase):
     def test_quan_00_starter_fixture(self):
-        """Quán khởi động bình thường với 2 bếp (B1-B2) và 4 bàn (T1-T4) theo Contract v1.1."""
+        """Quán khởi động bình thường với 2 bếp (B1-B2) và 4 bàn (T1-T4) theo Contract v1.1/v1.2."""
         with Workdir() as w:
             code, err = run_headless("--mode", "quan", "--seed", "1", "--ticks", "10",
                                      "--out", w.path("q.jsonl"))
@@ -28,7 +28,7 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(len(s["stoves"]), 2)
             self.assertEqual(len(s["tables"]), 4)
 
-    # ---- LÁT 3: Khách theo lịch, chọn món, giữ chỗ, kiên nhẫn, no_dish ----
+    # ---- LÁT 3: Khách theo lịch, chọn món, giữ chỗ theo id, kiên nhẫn, no_dish ----
 
     def test_quan_lat3_01_no_dish_when_stock_empty(self):
         """Kho rỗng -> tick 120 và tick 1020 phát no_dish, không có khách."""
@@ -42,9 +42,9 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(len(events(rows, "customer_arrived")), 0)
 
     def test_quan_lat3_02_customer_arrived_and_reserves_ingredients(self):
-        """Kho đủ 1 món -> tick 120 sinh khách C1 tại T1 và giữ chỗ nguyên liệu (chưa trừ kho)."""
+        """Kho đủ 1 món -> tick 120 sinh khách C1 tại T1 và giữ chỗ id cá thể ['I1'] (chưa trừ kho)."""
         with Workdir() as w:
-            sc = write_json(w.path("sc.json"), {"quan": {"stock": {"ca_loc": 1}}})
+            sc = write_json(w.path("sc.json"), {"quan": {"stock": items_v12("ca_loc")}})
             code, err = run_headless("--mode", "quan", "--seed", "7", "--ticks", "130",
                                      "--scenario", sc, "--snapshot-every", "1", "--out", w.path("q.jsonl"))
             self.assertEqual(code, 0, err)
@@ -56,21 +56,22 @@ class TestQuanLat3Lat4(unittest.TestCase):
 
             snaps = {s["tick"]: s for s in snapshots(rows)}
             s120 = snaps[120]
-            self.assertEqual(s120["stock"], {"ca_loc": 1})
+            self.assertEqual(len(s120["stock"]), 1)
+            self.assertEqual(s120["stock"][0]["id"], "I1")
             self.assertEqual(len(s120["customers"]), 1)
             c = s120["customers"][0]
             self.assertEqual(c["id"], "C1")
             self.assertEqual(c["state"], "waiting")
             self.assertEqual(c["order_status"], "reserved")
-            self.assertEqual(c["reserved"], {"ca_loc": 1})
+            self.assertEqual(c["reserved"], ["I1"])
             self.assertEqual(c["patience_ticks_left"], 3600)
 
     def test_quan_lat3_03_deterministic_bytes_same_seed(self):
         """Cùng seed và cùng kho -> JSONL buổi tối giống hệt nhau từng byte."""
         with Workdir() as w:
-            sc = write_json(w.path("sc.json"), {
-                "quan": {"stock": {"ca_loc": 2, "bong_sung": 4, "ca_linh": 6, "bong_dien_dien": 2}}
-            })
+            stock = items_v12("ca_loc", "ca_loc", "bong_sung", "bong_sung", "bong_sung", "bong_sung",
+                              "ca_linh", "ca_linh", "ca_linh", "bong_dien_dien")
+            sc = write_json(w.path("sc.json"), {"quan": {"stock": stock}})
             for i in (1, 2):
                 code, err = run_headless("--mode", "quan", "--seed", "42", "--ticks", "300",
                                          "--scenario", sc, "--out", w.path(f"q{i}.jsonl"))
@@ -79,11 +80,11 @@ class TestQuanLat3Lat4(unittest.TestCase):
                 self.assertEqual(a.read(), b.read())
 
     def test_quan_lat3_04_patience_expiry_reputation_and_release_reserve(self):
-        """Khách hết kiên nhẫn: rời quán, trừ 0.5 uy tín (kẹp >= 0), nhả nguyên liệu giữ chỗ cho khách sau."""
+        """Khách hết kiên nhẫn: rời quán, trừ 0.5 uy tín (kẹp >= 0), nhả id giữ chỗ cho khách sau."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "stock": {"ca_loc": 1},
+                    "stock": items_v12("ca_loc"),
                     "reputation": 0.3,
                     "customers": [{
                         "id": "C1",
@@ -103,9 +104,8 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(left[0]["tick"], 10)
             self.assertEqual(left[0]["data"]["order_id"], "C1")
             self.assertEqual(left[0]["data"]["reason"], "patience")
-            self.assertEqual(left[0]["data"]["reputation"], 0.0)  # max(0, 0.3 - 0.5)
+            self.assertEqual(left[0]["data"]["reputation"], 0.0)
 
-            # Nguyên liệu ca_loc đã được nhả nên tick 120 có thể đón khách mới C2
             arr = events(rows, "customer_arrived")
             self.assertEqual(len(arr), 1)
             self.assertEqual(arr[0]["tick"], 120)
@@ -123,15 +123,15 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(len(events(rows, "no_dish")), 0)
             self.assertEqual(len(events(rows, "customer_arrived")), 0)
 
-    # ---- LÁT 4: Bếp nấu, bưng món, phục vụ, boa, uy tín, kết ca ----
+    # ---- LÁT 4: Bếp nấu (giá theo độ tươi v1.2), bưng món, phục vụ, boa, uy tín, kết ca ----
 
     def test_quan_lat4_01_full_cook_pick_serve_pay_with_tip(self):
-        """Luồng đầy đủ: cook_started -> dish_ready -> dish_picked -> served (có boa) -> paid -> tăng uy tín & điểm."""
+        """Luồng đầy đủ (v1.2): hao 1 tick ở quán -> base_price = floor(60 * 99.99583 / 100) = 59, tip = floor(59*0.2) = 11."""
         with Workdir() as w:
             sc = write_json(w.path("sc.json"), {
                 "quan": {
-                    "player": {"pos": [2, 8]},  # đứng ngay bếp B1
-                    "stock": {"ca_loc": 1},
+                    "player": {"pos": [2, 8]},
+                    "stock": items_v12("ca_loc"),
                     "random_customers": False,
                     "customers": [{
                         "id": "C1",
@@ -142,10 +142,6 @@ class TestQuanLat3Lat4(unittest.TestCase):
                     }],
                 }
             })
-            # Tick 0: E bắt đầu nấu (cook_s=6 => 360 ticks -> dish_ready ở tick 361)
-            # Tick 363: E nhấc món lên tay (dish_picked ở tick 364)
-            # Tick 364..495: đi theo hướng [1, -1] từ [2,8] về gần T1 [9,2] (~[8.1, 1.9], dist <= 1.5m)
-            # Tick 496: dừng và bấm E phục vụ T1 (served ở tick 497), sau 600 tick -> paid ở tick 1097
             inp = write_json(w.path("in.json"), frames(
                 {"tick": 0, "interact": True},
                 {"tick": 1, "interact": False},
@@ -164,14 +160,13 @@ class TestQuanLat3Lat4(unittest.TestCase):
             cs = events(rows, "cook_started")
             self.assertEqual(len(cs), 1)
             self.assertEqual(cs[0]["tick"], 1)
-            self.assertEqual(cs[0]["data"], {
-                "stove_id": "B1",
-                "order_id": "C1",
-                "dish_id": "ca_loc_nuong_trui",
-                "items": {"ca_loc": 1},
-                "base_price": 60,
-            })
-            self.assertEqual(snaps[1]["stock"], {})
+            self.assertEqual(cs[0]["data"]["stove_id"], "B1")
+            self.assertEqual(cs[0]["data"]["order_id"], "C1")
+            self.assertEqual(cs[0]["data"]["dish_id"], "ca_loc_nuong_trui")
+            self.assertEqual(len(cs[0]["data"]["items"]), 1)
+            self.assertEqual(cs[0]["data"]["items"][0]["id"], "I1")
+            self.assertEqual(cs[0]["data"]["base_price"], 59)  # floor(60 * (100 - 1/240) / 100)
+            self.assertEqual(snaps[1]["stock"], [])
             self.assertEqual(snaps[1]["stoves"][0]["state"], "cooking")
             self.assertEqual(snaps[1]["stoves"][0]["cook_ticks_left"], 360)
 
@@ -185,14 +180,14 @@ class TestQuanLat3Lat4(unittest.TestCase):
             dp = events(rows, "dish_picked")
             self.assertEqual(len(dp), 1)
             self.assertEqual(dp[0]["tick"], 364)
-            self.assertEqual(snaps[364]["hand"], {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 60})
+            self.assertEqual(snaps[364]["hand"], {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 59})
             self.assertEqual(snaps[364]["stoves"][0]["state"], "idle")
 
             sv = events(rows, "served")
             self.assertEqual(len(sv), 1)
             self.assertEqual(sv[0]["tick"], 497)
-            self.assertEqual(sv[0]["data"]["base_price"], 60)
-            self.assertEqual(sv[0]["data"]["tip"], 12)  # floor(60 * 0.2)
+            self.assertEqual(sv[0]["data"]["base_price"], 59)
+            self.assertEqual(sv[0]["data"]["tip"], 11)  # floor(59 * 0.2)
             self.assertIsNone(snaps[497]["hand"])
 
             pd = events(rows, "paid")
@@ -201,16 +196,16 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(pd[0]["data"], {
                 "order_id": "C1",
                 "table_id": "T1",
-                "base_price": 60,
-                "tip": 12,
-                "amount": 72,
+                "base_price": 59,
+                "tip": 11,
+                "amount": 70,
                 "reason": "finished_eating",
             })
             end = rows[-1]
-            self.assertEqual(end["money"], 72)
-            self.assertEqual(end["earned"], 72)
+            self.assertEqual(end["money"], 70)
+            self.assertEqual(end["earned"], 70)
             self.assertEqual(end["reputation"], 3.2)
-            self.assertEqual(end["score"], 372)  # 72 + 100 * floor(3.2)
+            self.assertEqual(end["score"], 370)  # 70 + 100 * floor(3.2)
 
     def test_quan_lat4_02_serve_low_patience_no_tip(self):
         """Phục vụ khi kiên nhẫn < 50%: tip = 0, không tăng uy tín."""
@@ -226,7 +221,7 @@ class TestQuanLat3Lat4(unittest.TestCase):
                         "dish_id": "goi_bong_sung",
                         "state": "waiting",
                         "order_status": "assigned",
-                        "patience_ticks_left": 1000,  # < 1800 (50% của 3600)
+                        "patience_ticks_left": 1000,
                     }],
                 }
             })
@@ -245,7 +240,6 @@ class TestQuanLat3Lat4(unittest.TestCase):
     def test_quan_lat4_03_closing_time_settles_eating_and_waiting(self):
         """Hết giờ ca: khách đang ăn trả tiền ngay (closing); khách đang chờ rời đi không trừ uy tín."""
         with Workdir() as w:
-            # Trường hợp 1: khách đang ăn + uy tín cận trần 4.9 -> kẹp 5.0
             sc1 = write_json(w.path("sc1.json"), {
                 "quan": {
                     "time_left_ticks": 5,
@@ -278,14 +272,13 @@ class TestQuanLat3Lat4(unittest.TestCase):
                 "shift_earned": 144,
                 "reputation": 5.0,
             })
-            self.assertEqual(rows1[-1]["score"], 644)  # 144 + 100 * floor(5.0)
+            self.assertEqual(rows1[-1]["score"], 644)
 
-            # Trường hợp 2: khách đang chờ hết ca -> rời đi với reason="closing", không trừ uy tín
             sc2 = write_json(w.path("sc2.json"), {
                 "quan": {
                     "time_left_ticks": 5,
                     "reputation": 3.0,
-                    "stock": {"ca_loc": 1},
+                    "stock": items_v12("ca_loc"),
                     "random_customers": False,
                     "customers": [{
                         "id": "C1",
@@ -312,8 +305,8 @@ class TestQuanLat3Lat4(unittest.TestCase):
         tuning["quan"]["stoves"] = [{"id": "B1", "pos": [5, 5]}]
         tuning["quan"]["tables"] = [{"id": "T1", "pos": [6, 5]}, {"id": "T2", "pos": [12, 5]}]
         scenario = {
-            "player": {"pos": [5.5, 5.0]},  # cách đều B1 (0.5m) và T1 (0.5m)
-            "stock": {"ca_loc": 1, "bong_sung": 2},
+            "player": {"pos": [5.5, 5.0]},
+            "stock": items_v12("ca_loc", "bong_sung", "bong_sung"),
             "random_customers": False,
             "hand": {"order_id": "C1", "dish_id": "ca_loc_nuong_trui", "base_price": 60},
             "customers": [
@@ -347,7 +340,7 @@ class TestQuanLat3Lat4(unittest.TestCase):
         bad_blocks = [
             # Giữ chỗ vượt kho
             {
-                "stock": {},
+                "stock": [],
                 "customers": [{"id": "C1", "table_id": "T1", "dish_id": "ca_loc_nuong_trui", "state": "waiting"}],
             },
             # Đơn assigned nhưng không có món trên bếp hay trên tay
@@ -370,6 +363,17 @@ class TestQuanLat3Lat4(unittest.TestCase):
                     "eat_ticks_left": 100,
                 }],
             },
+            # Khách reserved trỏ tới cá thể đã ươn (fresh < 30)
+            {
+                "stock": [{"id": "I1", "kind": "ca_loc", "fresh": 25}],
+                "customers": [{
+                    "id": "C1",
+                    "table_id": "T1",
+                    "dish_id": "ca_loc_nuong_trui",
+                    "state": "waiting",
+                    "reserved": ["I1"],
+                }],
+            },
         ]
         for idx, block in enumerate(bad_blocks):
             with Workdir() as w:
@@ -381,15 +385,15 @@ class TestQuanLat3Lat4(unittest.TestCase):
                 self.assertFalse(os.path.exists(out), f"case #{idx} không được tạo file đầu ra")
 
     def test_e2e_two_process_gather_to_quan_full_cycle(self):
-        """E2E 2 tiến trình: buổi sáng lặn bắt cá lóc + cập bến ghi kho -> buổi tối đọc kho, nấu, phục vụ, thu tiền."""
+        """E2E 2 tiến trình (v1.2): bắt cá lóc + cập bến ghi kho cá thể -> quán đọc kho, nấu theo giá tươi, phục vụ, thu tiền."""
         with Workdir() as w:
             inv = w.path("inv.json")
-            # Tiến trình 1: gather (đặt sẵn cá lóc gần bến để bắt và cập bến nhanh)
             sc_g = write_json(w.path("sc_g.json"), {
                 "gather": {
                     "player": {"pos": [4, 1.5]},
                     "fish": [{"id": "F1", "kind": "ca_loc", "pos": [4, 1.5], "heading_deg": 0}],
                     "random_fish": False,
+                    "monsters": [],
                 }
             })
             inp_g = write_json(w.path("in_g.json"), frames(
@@ -402,19 +406,21 @@ class TestQuanLat3Lat4(unittest.TestCase):
                                      "--inventory-out", inv, "--out", w.path("g.jsonl"))
             self.assertEqual(code, 0, err)
             with open(inv, encoding="utf-8") as f:
-                self.assertEqual(json.load(f), {"items": {"ca_loc": 1}})
+                saved = json.load(f)
+            self.assertEqual(len(saved["items"]), 1)
+            self.assertEqual(saved["items"][0]["id"], "I1")
+            self.assertEqual(saved["items"][0]["kind"], "ca_loc")
+            # Bắt ở tick 1 (fresh=100), hao 45 tick (tick 2..46): 100 - 45/120 = 99.625
+            self.assertTrue(close(saved["items"][0]["fresh"], 99.625, 0.01), saved)
 
-            # Tiến trình 2: quan nạp --inventory từ tiến trình 1
-            # Người chơi xuất phát tại [8, 5]; đi tới B1 [2, 8] (khoảng cách 6.71m ~ 101 tick),
-            # tick 120 khách C1 tới gọi ca_loc_nuong_trui
             inp_q = write_json(w.path("in_q.json"), frames(
-                {"tick": 0, "move": [-1, 0.5]},   # hướng chính xác từ [8,5] -> [2,8]
+                {"tick": 0, "move": [-1, 0.5]},
                 {"tick": 100, "move": [0, 0]},
-                {"tick": 121, "interact": True},  # nấu C1 (360 tick -> chín ở tick 482)
+                {"tick": 121, "interact": True},
                 {"tick": 122, "interact": False},
-                {"tick": 485, "interact": True},  # nhấc món lên tay (tick 486)
-                {"tick": 486, "interact": False, "move": [1, -0.86]},  # đi thẳng về T1 [9,2]
-                {"tick": 625, "move": [0, 0], "interact": True},       # phục vụ T1 (tick 626)
+                {"tick": 485, "interact": True},
+                {"tick": 486, "interact": False, "move": [1, -0.86]},
+                {"tick": 625, "move": [0, 0], "interact": True},
                 {"tick": 626, "interact": False},
             ))
             code, err = run_headless("--mode", "quan", "--seed", "7", "--ticks", "1250",
@@ -427,10 +433,11 @@ class TestQuanLat3Lat4(unittest.TestCase):
             self.assertEqual(len(events(q_rows, "dish_picked")), 1)
             self.assertEqual(len(events(q_rows, "served")), 1)
             self.assertEqual(len(events(q_rows, "paid")), 1)
-            self.assertEqual(q_rows[-1]["money"], 72)
-            self.assertEqual(q_rows[-1]["earned"], 72)
+            # Giá chốt: floor(60 * (99.625 - 122/240) / 100) = floor(59.47) = 59; boa = floor(59 * 0.2) = 11 -> tổng 70
+            self.assertEqual(q_rows[-1]["money"], 70)
+            self.assertEqual(q_rows[-1]["earned"], 70)
             self.assertEqual(q_rows[-1]["reputation"], 3.2)
-            self.assertEqual(q_rows[-1]["score"], 372)
+            self.assertEqual(q_rows[-1]["score"], 370)
 
 
 if __name__ == "__main__":

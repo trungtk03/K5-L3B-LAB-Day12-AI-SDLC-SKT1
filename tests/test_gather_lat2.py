@@ -3,7 +3,7 @@
 import json
 import unittest
 
-from helpers import Workdir, events, frames, read_jsonl, run_headless, snapshots, write_json
+from helpers import Workdir, events, frames, items_v12, read_jsonl, run_headless, snapshots, write_json
 
 
 class TestGatherLat2(unittest.TestCase):
@@ -27,9 +27,9 @@ class TestGatherLat2(unittest.TestCase):
             self.assertEqual(gathers[0]["data"]["kind"], "bong_dien_dien")
             self.assertEqual(gathers[0]["data"]["amount"], 1)
 
-            # Snapshot sau khi hái: hold có bong_dien_dien, node N1 không còn ready và có regrow_ticks = 1200 - ticks
+            # Snapshot sau khi hái (v1.2): hold là mảng cá thể {id, kind, fresh=100}
             s = snapshots(rows)[1]
-            self.assertEqual(s["hold"], ["bong_dien_dien"])
+            self.assertEqual(s["hold"], [{"id": "I1", "kind": "bong_dien_dien", "fresh": 100}])
             node_n1 = next(n for n in s["nodes"] if n["id"] == "N1")
             self.assertFalse(node_n1["ready"])
             self.assertGreater(node_n1["regrow_ticks"], 1190)
@@ -40,7 +40,7 @@ class TestGatherLat2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [12, 0]},
-                    "hold": ["ca_loc"] * 12,  # hold_capacity là 12
+                    "hold": items_v12(*(["ca_loc"] * 12)),  # hold_capacity là 12
                     "nodes": [{"id": "N1", "kind": "bong_dien_dien", "pos": [12, 0], "regrow_ticks": 0}]
                 }
             })
@@ -77,9 +77,9 @@ class TestGatherLat2(unittest.TestCase):
             self.assertEqual(fc[0]["data"]["kind"], "ca_linh")
             self.assertEqual(fc[0]["data"]["yield"], 3)  # ca_linh yield = 3
 
-            # Snapshot sau khi bắt: hold có 3 ca_linh, fish rỗng, catch_cd_ticks dương
+            # Snapshot sau khi bắt (v1.2): hold có 3 cá thể ca_linh (I1..I3, fresh=100), fish rỗng, catch_cd_ticks dương
             s = snapshots(rows)[1]
-            self.assertEqual(s["hold"], ["ca_linh", "ca_linh", "ca_linh"])
+            self.assertEqual(s["hold"], items_v12("ca_linh", "ca_linh", "ca_linh"))
             self.assertEqual(len(s["fish"]), 0)
             self.assertGreater(s["player"]["catch_cd_ticks"], 0)
 
@@ -89,7 +89,7 @@ class TestGatherLat2(unittest.TestCase):
             sc = write_json(w.path("sc.json"), {
                 "gather": {
                     "player": {"pos": [15, 5]},
-                    "hold": ["ca_loc"] * 10,  # còn 2 chỗ, nhưng ca_linh cần 3
+                    "hold": items_v12(*(["ca_loc"] * 10)),  # còn 2 chỗ, nhưng ca_linh cần 3
                     "fish": [{"id": "F1", "kind": "ca_linh", "pos": [15, 5], "heading_deg": 0}],
                     "random_fish": False
                 }
