@@ -1,0 +1,5 @@
+=== Phase 4 Headless Soak Determinism Check (--seed 7 --days 10) ===
+Run 1: days_completed=10/10, crashes=0, duration_s=4.283
+Run 2: days_completed=10/10, crashes=0, duration_s=4.663
+Gameplay results[] match: EXACT (100% identical across all 10 days)
+Day 10 final: {"day": 10, "earned": 1034, "reputation": 5.0, "score": 1534}

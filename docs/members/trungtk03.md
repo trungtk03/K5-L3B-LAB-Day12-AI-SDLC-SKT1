@@ -1,8 +1,10 @@
 # trungtk03 — phản tư cá nhân (≤ 200 từ)
 
 - **Tôi đã làm:**
-  - Phase 1: Hoàn thiện Lát 3 & Lát 4 (`chonoi/sim/quan.py`), kiểm mâu thuẫn scenario (`chonoi/scenario.py`), 12 ca test + E2E 2 tiến trình, tài liệu DoD, skills `.agents/skills/`, proof Phase 1 và tag `phase-1`.
-  - Phase 2: Nâng cấp toàn bộ hệ thống lên Test Contract v1.1 (`game.contract.json`, `contract/inventory/inputs/scenario/headless`), mở rộng `quan.py` (2 bếp/4 bàn/6 món + lọc `day_plan`), triển khai `shop.py`, `day.py`, `pause` cả 3 mode trong `runner.py`, Menu/Chuyển pha/Shop/Pause/HUD v1.1 (`live.py`, `web/index.html`), phối hợp hoàn thiện `gather.py` v1.1, xuất bộ proof 70/70 test xanh và chốt tag `phase-2`.
-- **Tôi đã review:** Đối chiếu toàn bộ số chuẩn TICKET-02, rà regression P1 và cập nhật có giải trình 3 assertion thay đổi theo v1.1.
-- **AI sai ở đâu và tôi phát hiện thế nào:** Phase 1 từng lệch 3mm ngoài bán kính bàn `T1` trong test E2E và phát hiện rủi ro sai số float khi cộng uy tín `0.2`; Phase 2 rà soát kỹ thứ tự `buy` trước `shop_done` ở bước cuối và sao `upgrades → active_upgrades` chỉ khi sang Ngày mới.
-- **Điều tôi học được:** Khóa manifest và thứ tự xử lý mỗi tick ngay từ đầu phase giúp ghép nhiều pha `gather → quan → shop` qua nhiều Ngày cực kỳ ổn định.
+  - **Phase 1 (`54f5b99`, `84291de`, `a154787`, `2918bfa`):** Hoàn thiện Lát 3–4 (`chonoi/sim/quan.py`), kiểm mâu thuẫn `scenario.py`, 12 ca test + E2E 2 tiến trình, hợp đồng, skills `.agents/skills/`, proof & tag `phase-1`.
+  - **Phase 2 (`dd36bed`, `8bfcd86`, `5cc596a`, `1e37040`):** Nâng Contract v1.1, mở rộng `quan.py`, viết `day.py`, `shop.py`, `pause` cả 3 mode, Menu/HUD v1.1 & tag `phase-2`.
+  - **Phase 3 (`30e2122`, `fcd59e4`, `0909d5b`, `017f659`):** Chốt ADR-0001, nâng kho cá thể `Fraction` v1.2, giữ chỗ theo `id`, giá theo độ tươi, HUD độ tươi/ươn & tag `phase-3`.
+  - **Phase 4:** Triển khai `chonoi/bench.py`, `chonoi/soak.py`, 3 cảnh báo + tương phản cao, `tools/package_release.py`, `LICENSE`, Release `v1.0.0` & tag `phase-4`.
+- **Tôi đã giúp & kiểm chéo:** Review Lát 1–2 của `DungNguyen74` (`eecd317`, `3a5de50`), pair hoàn thiện `gather.py` v1.1/v1.2 (`4e329aa`, `fcd59e4`) và giữ regression 82/82 test xanh.
+- **AI sai ở đâu:** Quỹ đạo E2E lệch 3mm ngoài bán kính bàn `T1` và `.gitignore` từng bỏ sót file `.jsonl` proof — phát hiện qua test fail và `git show --stat`.
+- **Bài học:** Khóa hợp đồng + ADR sớm và tự động hóa kiểm chứng giúp vượt Change Request lớn không vỡ `main`.

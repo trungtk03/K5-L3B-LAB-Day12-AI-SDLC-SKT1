@@ -1,0 +1,3 @@
+=== Clean Package Verification (v1.0.0) ===
+Đã đóng gói thành công: c:\Users\Admin\Documents\GitHub_NguyenHoangTrung\K5-L3B-LAB-Day12-AI-SDLC-SKT1\dist\quan-an-cho-noi-v1.0.0.zip (67163 bytes)
+Extracted to clean directory -> ran headless --mode day --days 1 --seed 1 --ticks 60: EXIT 0 (OK)
